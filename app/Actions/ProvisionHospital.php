@@ -4,25 +4,17 @@ namespace App\Actions;
 
 use App\Models\Tenant;
 use App\Models\User;
+use App\Support\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use RuntimeException;
 use Throwable;
 
 class ProvisionHospital
 {
     public function execute(array $data): Tenant
     {
-        $slug = Str::slug($data['name']);
+        $slug = $this->generateUniqueSlug($data['name']);
         $tenantId = str_replace('-', '_', $slug);
-
-        if (Tenant::find($tenantId)) {
-            throw new RuntimeException("A hospital with a similar name already exists.");
-        }
-
-        if (DB::table('domains')->where('domain', $slug)->exists()) {
-            throw new RuntimeException("The domain \"{$slug}\" is already taken.");
-        }
 
         $tenant = Tenant::create([
             'id' => $tenantId,
@@ -50,6 +42,39 @@ class ProvisionHospital
             throw $e;
         }
 
+        AuditLogger::log(
+            'hospital.created',
+            [
+                'name' => $tenant->name,
+                'domain' => $slug,
+                'admin_email' => $data['admin_email'],
+            ],
+            $tenant,
+        );
+
         return $tenant;
+    }
+
+    private function generateUniqueSlug(string $name): string
+    {
+        $base = Str::slug($name) ?: 'hospital';
+        $slug = $base;
+        $i = 1;
+
+        while ($this->slugInUse($slug)) {
+            $i++;
+            $slug = "{$base}-{$i}";
+        }
+
+        return $slug;
+    }
+
+    private function slugInUse(string $slug): bool
+    {
+        if (DB::table('domains')->where('domain', $slug)->exists()) {
+            return true;
+        }
+
+        return Tenant::find(str_replace('-', '_', $slug)) !== null;
     }
 }

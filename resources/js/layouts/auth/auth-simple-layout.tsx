@@ -1,6 +1,4 @@
-import { Link } from '@inertiajs/react';
-import AppLogoIcon from '@/components/app-logo-icon';
-import { home } from '@/routes';
+import { Link, usePage } from '@inertiajs/react';
 import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({
@@ -8,26 +6,32 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
-    return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <Link
-                            href={home()}
-                            className="flex flex-col items-center gap-2 font-medium"
-                        >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                            </div>
-                            <span className="sr-only">{title}</span>
-                        </Link>
+    const { props } = usePage<{ theme?: { brand: string } }>();
+    const brand = props.theme?.brand ?? 'YaliHealth';
 
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">
-                                {description}
-                            </p>
+    return (
+        <div className="flex min-h-svh flex-col items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 p-6 md:p-10 dark:from-emerald-950/40 dark:via-background dark:to-teal-950/20">
+            <div className="w-full max-w-md">
+                <div className="rounded-2xl border bg-card p-8 shadow-[0_8px_40px_rgb(0,0,0,0.06)]">
+                    <div className="mb-8 flex flex-col items-center gap-3 text-center">
+                        <Link href="/" className="flex flex-col items-center gap-3">
+                            <img
+                                src="/images/logo.png"
+                                alt={brand}
+                                className="h-16 w-16 object-contain"
+                            />
+                        </Link>
+                        <div>
+                            {title && (
+                                <h1 className="text-2xl font-bold tracking-tight">
+                                    {title}
+                                </h1>
+                            )}
+                            {description && (
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    {description}
+                                </p>
+                            )}
                         </div>
                     </div>
                     {children}

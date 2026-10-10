@@ -14,7 +14,7 @@ class AuthController extends Controller
 {
     public function showLogin(): Response
     {
-        return Inertia::render('admin/auth/login');
+        return Inertia::render('admin/Login');
     }
 
     public function login(Request $request): RedirectResponse
@@ -42,6 +42,5 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('admin.login');
-        
     }
 }

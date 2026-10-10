@@ -12,6 +12,7 @@ use Stancl\Tenancy\Events;
 use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
+use App\Listeners\LogAuthEvents;
 
 class TenancyServiceProvider extends ServiceProvider
 {
@@ -103,6 +104,8 @@ class TenancyServiceProvider extends ServiceProvider
         $this->mapRoutes();
 
         $this->makeTenancyMiddlewareHighestPriority();
+
+                Event::subscribe(LogAuthEvents::class);
     }
 
     protected function bootEvents()

@@ -28,11 +28,13 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->redirectGuestsTo(function (Request $request) {
-            $host = $request->getHost();
-            $adminDomain = env('TENANCY_ADMIN_DOMAIN', 'admin.localhost');
+        $middleware->alias([
+            'tenant.active' => \App\Http\Middleware\EnsureTenantIsActive::class,
+        ]);
 
-            return $host === $adminDomain
+        $middleware->redirectGuestsTo(function (Request $request) {
+            $adminDomain = env('TENANCY_ADMIN_DOMAIN', 'admin.localhost');
+            return $request->getHost() === $adminDomain
                 ? route('admin.login')
                 : route('login');
         });

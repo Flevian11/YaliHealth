@@ -10,6 +10,7 @@ Route::middleware([
     'web',
     InitializeTenancyBySubdomain::class,
     PreventAccessFromCentralDomains::class,
+    'tenant.active',
 ])->group(function () {
     Route::get('/', function () {
         return 'Tenant: ' . tenant('id');

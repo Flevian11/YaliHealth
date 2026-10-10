@@ -1,48 +1,50 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['dark' => ($appearance ?? 'system') == 'dark'])>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        {{-- Inline script to detect system dark mode preference and apply it immediately --}}
-        <script>
-            (function() {
-                const appearance = '{{ $appearance ?? "system" }}';
+    @php
+        $brand = $theme['brand'] ?? config('app.name', 'YaliHealth');
+    @endphp
 
-                if (appearance === 'system') {
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    <title inertia>{{ $brand }}</title>
+    <meta name="application-name" content="{{ $brand }}">
+    <meta name="theme-color" content="#059669">
+    <meta name="color-scheme" content="light dark">
 
-                    if (prefersDark) {
-                        document.documentElement.classList.add('dark');
-                    }
-                }
-            })();
-        </script>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="{{ $brand }} — secure multi-tenant hospital management system connected to Kenya's Health Information Exchange.">
 
-        {{-- Inline style to set the HTML background color based on our theme in app.css --}}
-        <style>
-            html {
-                background-color: oklch(1 0 0);
-            }
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ $brand }}">
+    <meta property="og:title" content="{{ $brand }}">
+    <meta property="og:description" content="Secure multi-tenant hospital management, connected to Kenya's Health Information Exchange.">
+    <meta property="og:url" content="{{ request()->url() }}">
 
-            html.dark {
-                background-color: oklch(0.145 0 0);
-            }
-        </style>
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{ $brand }}">
+    <meta name="twitter:description" content="Secure multi-tenant hospital management.">
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" href="/images/logo.png">
+    <link rel="apple-touch-icon" href="/images/logo.png">
 
-        @fonts
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600,700" rel="stylesheet">
 
-        @viteReactRefresh
-        @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
-        <x-inertia::head>
-            <title>{{ config('app.name', 'Laravel') }}</title>
-        </x-inertia::head>
-    </head>
-    <body class="font-sans antialiased">
-        <x-inertia::app />
-    </body>
+    <style>
+        :root {
+            --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+        }
+    </style>
+
+    @viteReactRefresh
+    @vite(['resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+    @inertiaHead
+</head>
+<body class="min-h-svh bg-background font-sans text-foreground antialiased">
+    @inertia
+</body>
 </html>
