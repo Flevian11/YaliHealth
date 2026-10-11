@@ -17,6 +17,7 @@ class StoreHospitalRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:120'],
             'phone' => ['nullable', 'string', 'max:30'],
+            'plan_id' => ['nullable', 'exists:plans,id'],
             'admin_name' => ['required', 'string', 'max:120'],
             'admin_email' => ['required', 'email', 'max:150'],
             'admin_password' => ['required', 'confirmed', Password::min(8)],

@@ -21,7 +21,7 @@ import {
     Building2,
     ChevronLeft,
     ChevronRight,
-    CreditCard,
+    CircleDollarSign,
     Flag,
     HeartPulse,
     LayoutDashboard,
@@ -29,7 +29,6 @@ import {
     Megaphone,
     Menu,
     Network,
-    Palette,
     Plug,
     Search,
     Settings,
@@ -63,8 +62,8 @@ const navGroups: NavGroup[] = [
         label: 'Tenants',
         items: [
             { label: 'Hospitals', href: '/admin/hospitals', icon: Building2 },
+            { label: 'Plans', href: '/admin/plans', icon: CircleDollarSign },
             { label: 'Onboarding', icon: UserPlus, soon: true },
-            { label: 'Subscription Plans', icon: CreditCard, soon: true },
             { label: 'Feature Flags', icon: Flag, soon: true },
         ],
     },
@@ -88,7 +87,6 @@ const navGroups: NavGroup[] = [
     {
         label: 'System',
         items: [
-            { label: 'Theme', href: '/admin/theme', icon: Palette },
             { label: 'Announcements', icon: Megaphone, soon: true },
             { label: 'Settings', href: '/admin/settings', icon: Settings },
         ],

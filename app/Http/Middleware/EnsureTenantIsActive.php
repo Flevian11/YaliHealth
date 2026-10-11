@@ -12,8 +12,16 @@ class EnsureTenantIsActive
     {
         $tenant = tenant();
 
-        if ($tenant && ($tenant->status ?? 'active') !== 'active') {
+        if (! $tenant) {
+            return $next($request);
+        }
+
+        if (! $tenant->isActive()) {
             abort(403, 'This hospital account has been suspended. Contact your administrator.');
+        }
+
+        if (! $tenant->isSubscriptionActive()) {
+            abort(402, 'This hospital\'s subscription has expired or is inactive. Please contact the platform administrator.');
         }
 
         return $next($request);

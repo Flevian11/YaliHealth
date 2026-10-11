@@ -20,6 +20,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
     Building2,
     CheckCircle2,
     Copy,
@@ -31,6 +32,7 @@ import {
     Play,
     Plus,
     Search,
+    Sparkles,
     Trash2,
     UserPlus,
     X,
@@ -42,6 +44,17 @@ import {
     useState,
 } from 'react';
 
+type PlanSummary = {
+    id: number;
+    name: string;
+    slug: string;
+    billing_cycle: string;
+    price_yearly: number;
+    currency: string;
+    setup_fee: number;
+    trial_days: number;
+};
+
 type Hospital = {
     id: string;
     name: string;
@@ -51,6 +64,12 @@ type Hospital = {
     status: string;
     domains: string[];
     created_at: string;
+    plan: PlanSummary | null;
+    subscription_status: string;
+    trial_ends_at: string | null;
+    current_period_end: string | null;
+    trial_days_left: number;
+    can_access_system: boolean;
 };
 
 type Paginator<T> = {
@@ -61,7 +80,12 @@ type Paginator<T> = {
     total: number;
 };
 
-type Stats = { total: number; active: number; suspended: number };
+type Stats = {
+    total: number;
+    active: number;
+    suspended: number;
+    expiring_soon: number;
+};
 
 function initials(name: string): string {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -83,16 +107,23 @@ function relativeTime(iso: string): string {
     });
 }
 
+function formatPrice(amount: number, currency: string): string {
+    if (amount === 0) return 'Free';
+    return `${currency} ${amount.toLocaleString()}`;
+}
+
 export default function Hospitals({
     hospitals,
     filters,
     tenantBase,
     stats,
+    plans,
 }: {
     hospitals: Paginator<Hospital>;
-    filters: { q: string; status: string };
+    filters: { q: string; status: string; plan: string };
     tenantBase: string;
     stats: Stats;
+    plans: PlanSummary[];
 }) {
     const { props } = usePage<{ flash?: { success?: string } }>();
 
@@ -103,7 +134,6 @@ export default function Hospitals({
     const [query, setQuery] = useState(filters.q ?? '');
     const firstRender = useRef(true);
 
-    // Debounced search
     useEffect(() => {
         if (firstRender.current) {
             firstRender.current = false;
@@ -112,7 +142,11 @@ export default function Hospitals({
         const handle = setTimeout(() => {
             router.get(
                 '/admin/hospitals',
-                { q: query, status: filters.status || undefined },
+                {
+                    q: query,
+                    status: filters.status || undefined,
+                    plan: filters.plan || undefined,
+                },
                 {
                     preserveState: true,
                     preserveScroll: true,
@@ -124,10 +158,15 @@ export default function Hospitals({
         return () => clearTimeout(handle);
     }, [query]);
 
-    const setStatus = (s: string) => {
+    const applyFilter = (key: string, value: string) => {
         router.get(
             '/admin/hospitals',
-            { q: filters.q || undefined, status: s || undefined },
+            {
+                q: filters.q || undefined,
+                status: filters.status || undefined,
+                plan: filters.plan || undefined,
+                [key]: value || undefined,
+            },
             {
                 preserveState: true,
                 preserveScroll: true,
@@ -145,9 +184,16 @@ export default function Hospitals({
 
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Hospitals</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        Hospitals
+                    </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
                         {stats.total} total · {stats.active} active · {stats.suspended} suspended
+                        {stats.expiring_soon > 0 && (
+                            <span className="text-amber-600 dark:text-amber-400">
+                                {' '}· {stats.expiring_soon} expiring soon
+                            </span>
+                        )}
                     </p>
                 </div>
                 <Button onClick={() => setCreateOpen(true)}>
@@ -164,7 +210,7 @@ export default function Hospitals({
             )}
 
             {/* Filters */}
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center">
                 <div className="relative max-w-md flex-1">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                     <input
@@ -192,7 +238,7 @@ export default function Hospitals({
                     ].map(({ v, label }) => (
                         <button
                             key={v || 'all'}
-                            onClick={() => setStatus(v)}
+                            onClick={() => applyFilter('status', v)}
                             className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                                 (filters.status || '') === v
                                     ? 'border-primary bg-primary text-primary-foreground'
@@ -203,11 +249,26 @@ export default function Hospitals({
                         </button>
                     ))}
                 </div>
+
+                {plans.length > 0 && (
+                    <select
+                        value={filters.plan || ''}
+                        onChange={(e) => applyFilter('plan', e.target.value)}
+                        className="h-8 rounded-full border border-border bg-card px-3 text-xs font-medium text-muted-foreground outline-none transition hover:border-foreground/30"
+                    >
+                        <option value="">All plans</option>
+                        {plans.map((p) => (
+                            <option key={p.id} value={p.id}>
+                                {p.name}
+                            </option>
+                        ))}
+                    </select>
+                )}
             </div>
 
             {hospitals.data.length === 0 ? (
                 <EmptyState
-                    hasFilters={!!(filters.q || filters.status)}
+                    hasFilters={!!(filters.q || filters.status || filters.plan)}
                     onCreate={() => setCreateOpen(true)}
                 />
             ) : (
@@ -218,10 +279,10 @@ export default function Hospitals({
                                 <thead className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                                     <tr>
                                         <th className="px-5 py-3 font-semibold">Hospital</th>
+                                        <th className="px-5 py-3 font-semibold">Plan</th>
+                                        <th className="px-5 py-3 font-semibold">Subscription</th>
                                         <th className="px-5 py-3 font-semibold">Domain</th>
                                         <th className="px-5 py-3 font-semibold">Primary admin</th>
-                                        <th className="px-5 py-3 font-semibold">Status</th>
-                                        <th className="px-5 py-3 font-semibold">Created</th>
                                         <th className="px-5 py-3" />
                                     </tr>
                                 </thead>
@@ -270,6 +331,25 @@ export default function Hospitals({
                                                     </button>
                                                 </td>
                                                 <td className="px-5 py-3">
+                                                    {h.plan ? (
+                                                        <div className="min-w-0">
+                                                            <p className="text-sm font-medium">
+                                                                {h.plan.name}
+                                                            </p>
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                {formatPrice(h.plan.price_yearly, h.plan.currency)}
+                                                            </p>
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground">
+                                                            No plan
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <SubscriptionBadge hospital={h} />
+                                                </td>
+                                                <td className="px-5 py-3">
                                                     {domain ? (
                                                         <button
                                                             onClick={() => copy(domain)}
@@ -277,7 +357,7 @@ export default function Hospitals({
                                                             title="Click to copy"
                                                         >
                                                             <Globe className="h-3 w-3 text-muted-foreground" />
-                                                            {domain}
+                                                            {h.domains[0]}
                                                             <Copy className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                                                         </button>
                                                     ) : (
@@ -293,20 +373,6 @@ export default function Hospitals({
                                                             {h.admin_email ?? '—'}
                                                         </p>
                                                     </div>
-                                                </td>
-                                                <td className="px-5 py-3">
-                                                    <Badge
-                                                        className={
-                                                            active
-                                                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                                                : 'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
-                                                        }
-                                                    >
-                                                        {h.status}
-                                                    </Badge>
-                                                </td>
-                                                <td className="px-5 py-3 text-xs text-muted-foreground">
-                                                    {relativeTime(h.created_at)}
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
                                                     <DropdownMenu>
@@ -394,31 +460,39 @@ export default function Hospitals({
                         total={hospitals.total}
                         perPage={hospitals.per_page}
                         baseUrl="/admin/hospitals"
-                        filters={{ q: filters.q, status: filters.status }}
+                        filters={{
+                            q: filters.q,
+                            status: filters.status,
+                            plan: filters.plan,
+                        }}
                     />
                 </>
             )}
 
             {/* Create dialog */}
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Create hospital</DialogTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Provisions a new tenant with its own schema, subdomain, and administrator.
                         </p>
                     </DialogHeader>
-                    <CreateForm onSuccess={() => setCreateOpen(false)} />
+                    <CreateForm
+                        plans={plans}
+                        onSuccess={() => setCreateOpen(false)}
+                    />
                 </DialogContent>
             </Dialog>
 
             {/* Detail dialog */}
             <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-                <DialogContent className="max-w-xl">
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     {detail && (
                         <DetailView
                             hospital={detail}
                             tenantBase={tenantBase}
+                            plans={plans}
                             onClose={() => setDetail(null)}
                         />
                     )}
@@ -450,6 +524,75 @@ export default function Hospitals({
     );
 }
 
+/* ───────────── Subscription badge ───────────── */
+function SubscriptionBadge({ hospital }: { hospital: Hospital }) {
+    const { subscription_status, trial_days_left, trial_ends_at, current_period_end, can_access_system } = hospital;
+
+    if (!can_access_system) {
+        return (
+            <div className="flex items-center gap-1.5">
+                <span className="flex h-6 items-center gap-1 rounded-full bg-rose-100 px-2 text-[10px] font-semibold uppercase tracking-wide text-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
+                    <AlertTriangle className="h-3 w-3" />
+                    No access
+                </span>
+            </div>
+        );
+    }
+
+    if (subscription_status === 'trialing') {
+        const urgent = trial_days_left <= 3;
+        return (
+            <div className="flex items-center gap-1.5">
+                <span
+                    className={`flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-semibold uppercase tracking-wide ${
+                        urgent
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                            : 'bg-sky-100 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300'
+                    }`}
+                >
+                    <Sparkles className="h-3 w-3" />
+                    Trial · {trial_days_left}d
+                </span>
+            </div>
+        );
+    }
+
+    if (subscription_status === 'active') {
+        const expiringSoon =
+            current_period_end &&
+            new Date(current_period_end).getTime() - Date.now() <
+                14 * 24 * 60 * 60 * 1000;
+
+        return (
+            <div className="flex items-center gap-1.5">
+                <span
+                    className={`flex h-6 items-center gap-1 rounded-full px-2 text-[10px] font-semibold uppercase tracking-wide ${
+                        expiringSoon
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    }`}
+                >
+                    <CheckCircle2 className="h-3 w-3" />
+                    {expiringSoon ? 'Expiring' : 'Active'}
+                </span>
+                {current_period_end && (
+                    <span className="text-[11px] text-muted-foreground">
+                        {expiringSoon
+                            ? `in ${Math.max(0, Math.ceil((new Date(current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}d`
+                            : relativeTime(current_period_end)}
+                    </span>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <span className="flex h-6 items-center gap-1 rounded-full bg-muted px-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {subscription_status}
+        </span>
+    );
+}
+
 /* ───────────── Empty ───────────── */
 function EmptyState({
     hasFilters,
@@ -468,7 +611,7 @@ function EmptyState({
             </h3>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 {hasFilters
-                    ? 'Try clearing the search or filter.'
+                    ? 'Try clearing the search or filters.'
                     : 'Provision your first tenant to get started.'}
             </p>
             {!hasFilters && (
@@ -554,10 +697,12 @@ type Admin = {
 function DetailView({
     hospital,
     tenantBase,
+    plans,
     onClose,
 }: {
     hospital: Hospital;
     tenantBase: string;
+    plans: PlanSummary[];
     onClose: () => void;
 }) {
     const displayName = hospital.name?.trim() || hospital.domains[0] || hospital.id;
@@ -571,6 +716,7 @@ function DetailView({
 
     const [admins, setAdmins] = useState<Admin[] | null>(null);
     const [addOpen, setAddOpen] = useState(false);
+    const [planOpen, setPlanOpen] = useState(false);
 
     const loadAdmins = () => {
         fetch(`/admin/hospitals/${hospital.id}/admins`, {
@@ -605,19 +751,126 @@ function DetailView({
                     <p className="mt-0.5 text-sm text-muted-foreground">
                         Created {relativeTime(hospital.created_at)}
                     </p>
-                    <Badge
-                        className={`mt-2 ${
-                            active
-                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
-                                : 'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
-                        }`}
-                    >
-                        {hospital.status}
-                    </Badge>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Badge
+                            className={
+                                active
+                                    ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                    : 'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300'
+                            }
+                        >
+                            {hospital.status}
+                        </Badge>
+                        <SubscriptionBadge hospital={hospital} />
+                    </div>
                 </div>
             </div>
 
             <div className="mt-6 space-y-5">
+                {/* Subscription */}
+                <Section
+                    title="Subscription"
+                    action={
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 gap-1 text-xs"
+                            onClick={() => setPlanOpen(true)}
+                        >
+                            <Sparkles className="h-3 w-3" />
+                            Change plan
+                        </Button>
+                    }
+                >
+                    {hospital.plan ? (
+                        <>
+                            <Row
+                                label="Plan"
+                                value={
+                                    <span className="font-medium">
+                                        {hospital.plan.name}
+                                    </span>
+                                }
+                            />
+                            <Row
+                                label="Billing"
+                                value={
+                                    <span className="text-xs">
+                                        {formatPrice(
+                                            hospital.plan.price_yearly,
+                                            hospital.plan.currency,
+                                        )}{' '}
+                                        /{' '}
+                                        {hospital.plan.billing_cycle === 'annual'
+                                            ? 'year'
+                                            : hospital.plan.billing_cycle === 'semi_annual'
+                                              ? '6 months'
+                                              : hospital.plan.billing_cycle === 'quarterly'
+                                                ? 'quarter'
+                                                : 'month'}
+                                    </span>
+                                }
+                            />
+                            <Row
+                                label="Status"
+                                value={
+                                    <Badge
+                                        variant={
+                                            hospital.subscription_status === 'active'
+                                                ? 'default'
+                                                : 'secondary'
+                                        }
+                                        className={
+                                            hospital.subscription_status === 'active'
+                                                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                : ''
+                                        }
+                                    >
+                                        {hospital.subscription_status}
+                                    </Badge>
+                                }
+                            />
+                            {hospital.trial_ends_at && (
+                                <Row
+                                    label="Trial ends"
+                                    value={new Date(
+                                        hospital.trial_ends_at,
+                                    ).toLocaleDateString()}
+                                />
+                            )}
+                            {hospital.current_period_end && (
+                                <Row
+                                    label="Renews"
+                                    value={new Date(
+                                        hospital.current_period_end,
+                                    ).toLocaleDateString()}
+                                />
+                            )}
+                            <Row
+                                label="System access"
+                                value={
+                                    hospital.can_access_system ? (
+                                        <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                                            <CheckCircle2 className="h-3.5 w-3.5" />
+                                            Enabled
+                                        </span>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 text-rose-600 dark:text-rose-400">
+                                            <AlertTriangle className="h-3.5 w-3.5" />
+                                            Blocked
+                                        </span>
+                                    )
+                                }
+                            />
+                        </>
+                    ) : (
+                        <p className="py-2 text-xs text-muted-foreground">
+                            No plan assigned.
+                        </p>
+                    )}
+                </Section>
+
+                {/* Tenant */}
                 <Section title="Tenant">
                     <Row
                         label="Internal ID"
@@ -665,6 +918,7 @@ function DetailView({
                     <Row label="Phone" value={hospital.phone ?? '—'} />
                 </Section>
 
+                {/* Admins */}
                 <Section
                     title={`Administrators${admins ? ` (${admins.length})` : ''}`}
                     action={
@@ -735,6 +989,17 @@ function DetailView({
                     loadAdmins();
                 }}
             />
+
+            <ChangePlanDialog
+                open={planOpen}
+                onOpenChange={setPlanOpen}
+                hospital={hospital}
+                plans={plans}
+                onSuccess={() => {
+                    setPlanOpen(false);
+                    onClose();
+                }}
+            />
         </>
     );
 }
@@ -769,6 +1034,167 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
             <span className="text-muted-foreground">{label}</span>
             <span className="text-right">{value}</span>
         </div>
+    );
+}
+
+/* ───────────── Change plan dialog ───────────── */
+function ChangePlanDialog({
+    open,
+    onOpenChange,
+    hospital,
+    plans,
+    onSuccess,
+}: {
+    open: boolean;
+    onOpenChange: (o: boolean) => void;
+    hospital: Hospital;
+    plans: PlanSummary[];
+    onSuccess: () => void;
+}) {
+    const [selected, setSelected] = useState<number | null>(
+        hospital.plan?.id ?? null,
+    );
+    const [resetPeriod, setResetPeriod] = useState(false);
+    const [processing, setProcessing] = useState(false);
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        if (!selected) return;
+        setProcessing(true);
+        router.post(
+            `/admin/hospitals/${hospital.id}/plan`,
+            { plan_id: selected, reset_period: resetPeriod },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setProcessing(false);
+                    onSuccess();
+                },
+                onError: () => setProcessing(false),
+            },
+        );
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                    <DialogTitle>Change plan</DialogTitle>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Switch {hospital.name || hospital.id} to a different
+                        billing cycle.
+                    </p>
+                </DialogHeader>
+
+                <form onSubmit={submit} className="mt-4 space-y-4">
+                    <div className="grid gap-2">
+                        {plans.map((p) => {
+                            const isCurrent = p.id === hospital.plan?.id;
+                            const cycleLabel =
+                                p.billing_cycle === 'annual'
+                                    ? 'per year'
+                                    : p.billing_cycle === 'semi_annual'
+                                      ? 'every 6 months'
+                                      : p.billing_cycle === 'quarterly'
+                                        ? 'per quarter'
+                                        : 'per month';
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    onClick={() => setSelected(p.id)}
+                                    className={`flex items-center justify-between rounded-lg border p-3 text-left transition ${
+                                        selected === p.id
+                                            ? 'border-primary bg-primary/5'
+                                            : 'hover:border-foreground/20'
+                                    }`}
+                                >
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-sm font-medium">
+                                                {p.name}
+                                            </span>
+                                            {isCurrent && (
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="text-[10px]"
+                                                >
+                                                    Current
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                            {formatPrice(p.price_yearly, p.currency)}{' '}
+                                            {cycleLabel}
+                                            {p.setup_fee > 0 && (
+                                                <>
+                                                    {' '}· +{' '}
+                                                    {formatPrice(
+                                                        p.setup_fee,
+                                                        p.currency,
+                                                    )}{' '}
+                                                    setup
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
+                                    <div
+                                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${
+                                            selected === p.id
+                                                ? 'border-primary'
+                                                : 'border-border'
+                                        }`}
+                                    >
+                                        {selected === p.id && (
+                                            <div className="h-2 w-2 rounded-full bg-primary" />
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border bg-muted/30 p-3 text-sm">
+                        <input
+                            type="checkbox"
+                            checked={resetPeriod}
+                            onChange={(e) => setResetPeriod(e.target.checked)}
+                            className="mt-0.5 h-4 w-4 rounded border-border"
+                        />
+                        <div>
+                            <div className="font-medium">
+                                Reset billing period
+                            </div>
+                            <p className="mt-0.5 text-[11px] text-muted-foreground">
+                                Immediately starts a new billing cycle from today.
+                                Leave unchecked to keep the current period and only
+                                change the plan tier.
+                            </p>
+                        </div>
+                    </label>
+
+                    <div className="flex justify-end gap-2 border-t pt-4">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => onOpenChange(false)}
+                            disabled={processing}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            disabled={processing || !selected || selected === hospital.plan?.id}
+                        >
+                            {processing && (
+                                <LoaderCircle className="mr-1.5 h-4 w-4 animate-spin" />
+                            )}
+                            Change plan
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -876,10 +1302,17 @@ function AddAdminDialog({
 }
 
 /* ───────────── Create form ───────────── */
-function CreateForm({ onSuccess }: { onSuccess: () => void }) {
+function CreateForm({
+    plans,
+    onSuccess,
+}: {
+    plans: PlanSummary[];
+    onSuccess: () => void;
+}) {
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         phone: '',
+        plan_id: plans[0]?.id ?? null,
         admin_name: '',
         admin_email: '',
         admin_password: '',
@@ -926,6 +1359,35 @@ function CreateForm({ onSuccess }: { onSuccess: () => void }) {
                             onChange={(e) => setData('phone', e.target.value)}
                             placeholder="+254 700 000 000"
                         />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="plan_id">Subscription plan</Label>
+                        <select
+                            id="plan_id"
+                            value={data.plan_id ?? ''}
+                            onChange={(e) =>
+                                setData(
+                                    'plan_id',
+                                    e.target.value ? Number(e.target.value) : null,
+                                )
+                            }
+                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                        >
+                            {plans.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name} · {p.currency}{' '}
+                                    {p.price_yearly.toLocaleString()} /{' '}
+                                    {p.billing_cycle === 'annual'
+                                        ? 'year'
+                                        : p.billing_cycle === 'semi_annual'
+                                          ? '6 months'
+                                          : p.billing_cycle === 'quarterly'
+                                            ? 'quarter'
+                                            : 'month'}
+                                </option>
+                            ))}
+                        </select>
+                        <InputError message={errors.plan_id} />
                     </div>
                 </div>
             </div>

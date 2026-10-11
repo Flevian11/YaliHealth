@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Models\Plan;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\AuditLogger;
@@ -16,6 +17,14 @@ class ProvisionHospital
         $slug = $this->generateUniqueSlug($data['name']);
         $tenantId = str_replace('-', '_', $slug);
 
+        $plan = isset($data['plan_id'])
+            ? Plan::find($data['plan_id'])
+            : Plan::where('is_active', true)->orderBy('sort_order')->first();
+
+        $trialEndsAt = $plan && $plan->trial_days > 0
+            ? now()->addDays($plan->trial_days)
+            : null;
+
         $tenant = Tenant::create([
             'id' => $tenantId,
             'name' => $data['name'],
@@ -23,6 +32,11 @@ class ProvisionHospital
             'admin_email' => $data['admin_email'],
             'phone' => $data['phone'] ?? null,
             'status' => 'active',
+            'plan_id' => $plan?->id,
+            'subscription_status' => $trialEndsAt ? 'trialing' : 'active',
+            'trial_ends_at' => $trialEndsAt,
+            'current_period_start' => $trialEndsAt ? null : now(),
+            'current_period_end' => $trialEndsAt ? null : now()->addMonths($plan?->billing_cycle_months ?? 1),
         ]);
 
         try {
@@ -48,6 +62,7 @@ class ProvisionHospital
                 'name' => $tenant->name,
                 'domain' => $slug,
                 'admin_email' => $data['admin_email'],
+                'plan_id' => $plan?->id,
             ],
             $tenant,
         );

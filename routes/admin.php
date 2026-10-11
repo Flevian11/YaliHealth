@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuditLogController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HospitalController;
+use App\Http\Controllers\Admin\PlanController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest:super_admin')->group(function () {
@@ -21,8 +22,17 @@ Route::middleware('auth:super_admin')->group(function () {
         Route::delete('{id}', [HospitalController::class, 'destroy'])->name('destroy');
         Route::post('{id}/suspend', [HospitalController::class, 'suspend'])->name('suspend');
         Route::post('{id}/activate', [HospitalController::class, 'activate'])->name('activate');
+        Route::post('{id}/plan', [HospitalController::class, 'changePlan'])->name('change-plan');
+        Route::post('{id}/trial-toggle', [HospitalController::class, 'toggleTrial'])->name('trial-toggle');
         Route::get('{id}/admins', [HospitalController::class, 'admins'])->name('admins.index');
         Route::post('{id}/admins', [HospitalController::class, 'storeAdmin'])->name('admins.store');
+    });
+
+    Route::prefix('admin/plans')->name('admin.plans.')->group(function () {
+        Route::get('/', [PlanController::class, 'index'])->name('index');
+        Route::post('/', [PlanController::class, 'store'])->name('store');
+        Route::put('{plan}', [PlanController::class, 'update'])->name('update');
+        Route::delete('{plan}', [PlanController::class, 'destroy'])->name('destroy');
     });
 
     Route::get('admin/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs');
