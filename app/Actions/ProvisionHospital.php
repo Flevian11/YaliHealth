@@ -25,6 +25,7 @@ class ProvisionHospital
             ? now()->addDays($plan->trial_days)
             : null;
 
+        // Create the tenant (only JSON columns go through stancl)
         $tenant = Tenant::create([
             'id' => $tenantId,
             'name' => $data['name'],
@@ -32,11 +33,17 @@ class ProvisionHospital
             'admin_email' => $data['admin_email'],
             'phone' => $data['phone'] ?? null,
             'status' => 'active',
+        ]);
+
+        // Write REAL columns directly — stancl routes these to the JSON data column
+        DB::table('tenants')->where('id', $tenantId)->update([
             'plan_id' => $plan?->id,
             'subscription_status' => $trialEndsAt ? 'trialing' : 'active',
             'trial_ends_at' => $trialEndsAt,
             'current_period_start' => $trialEndsAt ? null : now(),
-            'current_period_end' => $trialEndsAt ? null : now()->addMonths($plan?->billing_cycle_months ?? 1),
+            'current_period_end' => $trialEndsAt
+                ? null
+                : now()->addMonths($plan?->billing_cycle_months ?? 1),
         ]);
 
         try {
@@ -67,7 +74,7 @@ class ProvisionHospital
             $tenant,
         );
 
-        return $tenant;
+        return $tenant->fresh();
     }
 
     private function generateUniqueSlug(string $name): string

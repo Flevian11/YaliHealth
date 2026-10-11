@@ -14,27 +14,33 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
+            // Central — must be first so /register, /login resolve on localhost
+            Route::middleware('web')
+                ->domain(env('APP_DOMAIN', 'localhost'))
+                ->group(base_path('routes/web.php'));
+
+            // Admin console
             Route::middleware('web')
                 ->domain(env('TENANCY_ADMIN_DOMAIN', 'admin.localhost'))
                 ->group(base_path('routes/admin.php'));
 
+            // Tenant routes — no domain constraint, tenancy middleware handles identification
             Route::middleware('web')
-                ->domain('{tenant}.'.env('TENANCY_TENANT_SUFFIX', 'localhost'))
                 ->group(base_path('routes/tenant.php'));
-
-            Route::middleware('web')
-                ->domain(env('APP_DOMAIN', 'localhost'))
-                ->group(base_path('routes/web.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'tenant.active' => \App\Http\Middleware\EnsureTenantIsActive::class,
+            'feature' => \App\Http\Middleware\EnsureFeatureEnabled::class,
+            'perm' => \App\Http\Middleware\EnsureSuperAdminHasPermission::class,
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {
+            $host = $request->getHost();
             $adminDomain = env('TENANCY_ADMIN_DOMAIN', 'admin.localhost');
-            return $request->getHost() === $adminDomain
+
+            return $host === $adminDomain
                 ? route('admin.login')
                 : route('login');
         });

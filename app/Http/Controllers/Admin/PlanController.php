@@ -7,6 +7,7 @@ use App\Models\Plan;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -16,14 +17,26 @@ class PlanController extends Controller
 {
     public function index(): Response
     {
+        // Direct count — withCount('tenants') is unreliable with stancl's Tenant model
+        $counts = DB::table('tenants')
+            ->select('plan_id', DB::raw('COUNT(*) as total'))
+            ->whereNotNull('plan_id')
+            ->groupBy('plan_id')
+            ->pluck('total', 'plan_id');
+
+        $plans = Plan::query()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(function (Plan $p) use ($counts) {
+                return array_merge($this->serialize($p), [
+                    'tenants_count' => (int) ($counts[$p->id] ?? 0),
+                ]);
+            })
+            ->all();
+
         return Inertia::render('admin/Plans', [
-            'plans' => Plan::query()
-                ->withCount('tenants')
-                ->orderBy('sort_order')
-                ->orderBy('name')
-                ->get()
-                ->map(fn (Plan $p) => $this->serialize($p))
-                ->all(),
+            'plans' => $plans,
             'featureCatalog' => config('features.groups'),
         ]);
     }
@@ -59,7 +72,10 @@ class PlanController extends Controller
 
     public function destroy(Plan $plan): RedirectResponse
     {
-        if ($plan->tenants()->exists()) {
+        // Direct count check
+        $tenantsCount = DB::table('tenants')->where('plan_id', $plan->id)->count();
+
+        if ($tenantsCount > 0) {
             return back()->withErrors([
                 'plan' => 'Cannot delete a plan that has active hospitals on it.',
             ]);
@@ -75,7 +91,7 @@ class PlanController extends Controller
         return back()->with('success', "Plan \"{$name}\" deleted.");
     }
 
-        private function validated(Request $request, ?Plan $plan = null): array
+    private function validated(Request $request, ?Plan $plan = null): array
     {
         $slug = $request->input('slug') ?: Str::slug($request->input('name'));
 
@@ -113,7 +129,7 @@ class PlanController extends Controller
         return $data;
     }
 
-        private function serialize(Plan $p): array
+    private function serialize(Plan $p): array
     {
         return [
             'id' => $p->id,
@@ -132,7 +148,6 @@ class PlanController extends Controller
             'sort_order' => $p->sort_order,
             'features' => $p->features ?? [],
             'limits' => $p->limits ?? [],
-            'tenants_count' => $p->tenants_count ?? 0,
         ];
     }
 }

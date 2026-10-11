@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use App\Support\Features;
 
 class HospitalController extends Controller
 {
@@ -141,7 +142,7 @@ class HospitalController extends Controller
         return back()->with('success', "Hospital \"{$tenant->name}\" activated.");
     }
 
-    public function changePlan(Request $request, string $id): RedirectResponse
+        public function changePlan(Request $request, string $id): RedirectResponse
     {
         $data = $request->validate([
             'plan_id' => ['required', 'exists:plans,id'],
@@ -151,27 +152,30 @@ class HospitalController extends Controller
         $tenant = Tenant::findOrFail($id);
         $plan = Plan::findOrFail($data['plan_id']);
 
-        $previousPlanId = $tenant->plan_id;
-        $tenant->plan_id = $plan->id;
+        $previousPlanId = DB::table('tenants')->where('id', $tenant->id)->value('plan_id');
 
-        // If the hospital was on trial and we're assigning a real plan, start the billing period
-        if ($tenant->subscription_status === 'trialing' && ! $data['reset_period']) {
-            // Keep them on trial if the new plan has a trial
+        $update = [
+            'plan_id' => $plan->id,
+        ];
+
+        $isTrialing = $tenant->subscription_status === 'trialing';
+
+        if ($isTrialing && ! $data['reset_period']) {
             if ($plan->trial_days > 0) {
-                $tenant->trial_ends_at = now()->addDays($plan->trial_days);
+                $update['trial_ends_at'] = now()->addDays($plan->trial_days);
             } else {
-                $tenant->subscription_status = 'active';
-                $tenant->current_period_start = now();
-                $tenant->current_period_end = now()->addMonths($plan->billing_cycle_months);
+                $update['subscription_status'] = 'active';
+                $update['current_period_start'] = now();
+                $update['current_period_end'] = now()->addMonths($plan->billing_cycle_months);
             }
         } elseif ($data['reset_period'] ?? false) {
-            $tenant->subscription_status = 'active';
-            $tenant->trial_ends_at = null;
-            $tenant->current_period_start = now();
-            $tenant->current_period_end = now()->addMonths($plan->billing_cycle_months);
+            $update['subscription_status'] = 'active';
+            $update['trial_ends_at'] = null;
+            $update['current_period_start'] = now();
+            $update['current_period_end'] = now()->addMonths($plan->billing_cycle_months);
         }
 
-        $tenant->save();
+        DB::table('tenants')->where('id', $tenant->id)->update($update);
 
         AuditLogger::log('hospital.plan.changed', [
             'id' => $tenant->id,
@@ -187,28 +191,29 @@ class HospitalController extends Controller
     public function toggleTrial(string $id): RedirectResponse
     {
         $tenant = Tenant::findOrFail($id);
+        $plan = $tenant->plan;
 
         if ($tenant->subscription_status === 'trialing') {
-            $tenant->subscription_status = 'active';
-            $tenant->trial_ends_at = null;
-            $tenant->current_period_start = now();
-            $tenant->current_period_end = now()->addMonths(
-                $tenant->plan?->billing_cycle_months ?? 1
-            );
+            DB::table('tenants')->where('id', $tenant->id)->update([
+                'subscription_status' => 'active',
+                'trial_ends_at' => null,
+                'current_period_start' => now(),
+                'current_period_end' => now()->addMonths(
+                    $plan?->billing_cycle_months ?? 1
+                ),
+            ]);
         } else {
-            $tenant->subscription_status = 'trialing';
-            $tenant->trial_ends_at = now()->addDays(
-                $tenant->plan?->trial_days ?? 14
-            );
-            $tenant->current_period_start = null;
-            $tenant->current_period_end = null;
+            DB::table('tenants')->where('id', $tenant->id)->update([
+                'subscription_status' => 'trialing',
+                'trial_ends_at' => now()->addDays($plan?->trial_days ?? 14),
+                'current_period_start' => null,
+                'current_period_end' => null,
+            ]);
         }
-
-        $tenant->save();
 
         AuditLogger::log('hospital.subscription.status.changed', [
             'id' => $tenant->id,
-            'status' => $tenant->subscription_status,
+            'status' => $tenant->fresh()->subscription_status,
         ], $tenant);
 
         return back()->with('success', 'Subscription status updated.');
@@ -299,5 +304,52 @@ class HospitalController extends Controller
             'trial_days_left' => $t->trialDaysLeft(),
             'can_access_system' => $t->canAccessSystem(),
         ];
+    }
+
+        public function features(string $id): JsonResponse
+    {
+        $tenant = Tenant::findOrFail($id);
+
+        return response()->json([
+            'catalog' => Features::catalog(),
+            'resolved' => Features::for($tenant),
+            'plan_features' => $tenant->plan?->features ?? [],
+            'overrides' => $tenant->feature_overrides ?? [],
+            'plan' => $tenant->plan ? [
+                'id' => $tenant->plan->id,
+                'name' => $tenant->plan->name,
+            ] : null,
+        ]);
+    }
+
+        public function updateFeatures(Request $request, string $id): RedirectResponse
+    {
+        $data = $request->validate([
+            'overrides' => ['present', 'array'],
+            'overrides.*' => ['boolean'],
+        ]);
+
+        $tenant = Tenant::findOrFail($id);
+
+        $planFeatures = $tenant->plan?->features ?? [];
+        $clean = [];
+
+        foreach ($data['overrides'] as $key => $value) {
+            $inPlan = in_array($key, $planFeatures, true);
+            // Only store if it's a deviation from plan default
+            if ((bool) $value !== $inPlan) {
+                $clean[$key] = (bool) $value;
+            }
+        }
+
+        $tenant->feature_overrides = $clean;
+        $tenant->save();
+
+        AuditLogger::log('hospital.features.updated', [
+            'id' => $tenant->id,
+            'overrides' => $clean,
+        ], $tenant);
+
+        return back()->with('success', 'Feature overrides saved.');
     }
 }

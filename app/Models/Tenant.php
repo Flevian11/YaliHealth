@@ -16,13 +16,72 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         'trial_ends_at' => 'datetime',
         'current_period_start' => 'datetime',
         'current_period_end' => 'datetime',
-        'feature_overrides' => 'array',
     ];
+
+    /* ─── Force real-column reads/writes for billing fields ─── */
+
+    public function getPlanIdAttribute($value): ?int
+    {
+        return $value !== null ? (int) $value : null;
+    }
+
+    public function setPlanIdAttribute($value): void
+    {
+        $this->attributes['plan_id'] = $value;
+    }
+
+    public function getSubscriptionStatusAttribute($value): ?string
+    {
+        return $value;
+    }
+
+    public function setSubscriptionStatusAttribute($value): void
+    {
+        $this->attributes['subscription_status'] = $value;
+    }
+
+    public function setTrialEndsAtAttribute($value): void
+    {
+        $this->attributes['trial_ends_at'] = $value;
+    }
+
+    public function setCurrentPeriodStartAttribute($value): void
+    {
+        $this->attributes['current_period_start'] = $value;
+    }
+
+    public function setCurrentPeriodEndAttribute($value): void
+    {
+        $this->attributes['current_period_end'] = $value;
+    }
+
+    public function getFeatureOverridesAttribute($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && $value !== '') {
+            $decoded = json_decode($value, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return [];
+    }
+
+    public function setFeatureOverridesAttribute($value): void
+    {
+        $this->attributes['feature_overrides'] = json_encode($value ?? []);
+    }
+
+    /* ─── Relations ─── */
 
     public function plan()
     {
         return $this->belongsTo(Plan::class);
     }
+
+    /* ─── Status helpers ─── */
 
     public function isActive(): bool
     {
@@ -47,7 +106,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
         }
 
         if (! $this->current_period_end) {
-            return true; // Active with no end date = perpetual (enterprise)
+            return true;
         }
 
         return $this->current_period_end->isFuture();
@@ -60,7 +119,7 @@ class Tenant extends BaseTenant implements TenantWithDatabase
 
     public function hasFeature(string $key): bool
     {
-        $overrides = $this->feature_overrides ?? [];
+        $overrides = $this->feature_overrides;
 
         if (array_key_exists($key, $overrides)) {
             return (bool) $overrides[$key];

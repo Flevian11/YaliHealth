@@ -188,10 +188,12 @@ export default function Hospitals({
                         Hospitals
                     </h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        {stats.total} total · {stats.active} active · {stats.suspended} suspended
+                        {stats.total} total · {stats.active} active ·{' '}
+                        {stats.suspended} suspended
                         {stats.expiring_soon > 0 && (
                             <span className="text-amber-600 dark:text-amber-400">
-                                {' '}· {stats.expiring_soon} expiring soon
+                                {' '}
+                                · {stats.expiring_soon} expiring soon
                             </span>
                         )}
                     </p>
@@ -278,18 +280,30 @@ export default function Hospitals({
                             <table className="w-full text-left text-sm">
                                 <thead className="border-b bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
                                     <tr>
-                                        <th className="px-5 py-3 font-semibold">Hospital</th>
-                                        <th className="px-5 py-3 font-semibold">Plan</th>
-                                        <th className="px-5 py-3 font-semibold">Subscription</th>
-                                        <th className="px-5 py-3 font-semibold">Domain</th>
-                                        <th className="px-5 py-3 font-semibold">Primary admin</th>
+                                        <th className="px-5 py-3 font-semibold">
+                                            Hospital
+                                        </th>
+                                        <th className="px-5 py-3 font-semibold">
+                                            Plan
+                                        </th>
+                                        <th className="px-5 py-3 font-semibold">
+                                            Subscription
+                                        </th>
+                                        <th className="px-5 py-3 font-semibold">
+                                            Domain
+                                        </th>
+                                        <th className="px-5 py-3 font-semibold">
+                                            Primary admin
+                                        </th>
                                         <th className="px-5 py-3" />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
                                     {hospitals.data.map((h) => {
                                         const displayName =
-                                            h.name?.trim() || h.domains[0] || h.id;
+                                            h.name?.trim() ||
+                                            h.domains[0] ||
+                                            h.id;
                                         const active = h.status === 'active';
                                         const domain = h.domains[0]
                                             ? `${h.domains[0]}.${tenantBase}`
@@ -305,12 +319,16 @@ export default function Hospitals({
                                             >
                                                 <td className="px-5 py-3">
                                                     <button
-                                                        onClick={() => setDetail(h)}
+                                                        onClick={() =>
+                                                            setDetail(h)
+                                                        }
                                                         className="flex items-center gap-3 text-left"
                                                     >
                                                         <div className="relative shrink-0">
                                                             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary/15 to-primary/5 text-xs font-bold text-primary">
-                                                                {initials(displayName)}
+                                                                {initials(
+                                                                    displayName,
+                                                                )}
                                                             </div>
                                                             <span
                                                                 className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-card ${
@@ -337,7 +355,12 @@ export default function Hospitals({
                                                                 {h.plan.name}
                                                             </p>
                                                             <p className="text-[11px] text-muted-foreground">
-                                                                {formatPrice(h.plan.price_yearly, h.plan.currency)}
+                                                                {formatPrice(
+                                                                    h.plan
+                                                                        .price_yearly,
+                                                                    h.plan
+                                                                        .currency,
+                                                                )}
                                                             </p>
                                                         </div>
                                                     ) : (
@@ -347,12 +370,16 @@ export default function Hospitals({
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-3">
-                                                    <SubscriptionBadge hospital={h} />
+                                                    <SubscriptionBadge
+                                                        hospital={h}
+                                                    />
                                                 </td>
                                                 <td className="px-5 py-3">
                                                     {domain ? (
                                                         <button
-                                                            onClick={() => copy(domain)}
+                                                            onClick={() =>
+                                                                copy(domain)
+                                                            }
                                                             className="inline-flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 font-mono text-[11px] transition hover:bg-muted/70"
                                                             title="Click to copy"
                                                         >
@@ -361,22 +388,28 @@ export default function Hospitals({
                                                             <Copy className="h-3 w-3 text-muted-foreground opacity-0 transition group-hover:opacity-100" />
                                                         </button>
                                                     ) : (
-                                                        <span className="text-xs text-muted-foreground">—</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            —
+                                                        </span>
                                                     )}
                                                 </td>
                                                 <td className="px-5 py-3">
                                                     <div className="min-w-0">
                                                         <p className="truncate text-sm">
-                                                            {h.admin_name ?? '—'}
+                                                            {h.admin_name ??
+                                                                '—'}
                                                         </p>
                                                         <p className="truncate text-[11px] text-muted-foreground">
-                                                            {h.admin_email ?? '—'}
+                                                            {h.admin_email ??
+                                                                '—'}
                                                         </p>
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
                                                     <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -390,20 +423,27 @@ export default function Hospitals({
                                                             className="w-52"
                                                         >
                                                             <DropdownMenuItem
-                                                                onSelect={() => setDetail(h)}
+                                                                onSelect={() =>
+                                                                    setDetail(h)
+                                                                }
                                                             >
                                                                 <Building2 className="mr-2 h-4 w-4" />
                                                                 View details
                                                             </DropdownMenuItem>
                                                             {url && (
-                                                                <DropdownMenuItem asChild>
+                                                                <DropdownMenuItem
+                                                                    asChild
+                                                                >
                                                                     <a
-                                                                        href={url}
+                                                                        href={
+                                                                            url
+                                                                        }
                                                                         target="_blank"
                                                                         rel="noreferrer"
                                                                     >
                                                                         <ExternalLink className="mr-2 h-4 w-4" />
-                                                                        Open tenant
+                                                                        Open
+                                                                        tenant
                                                                     </a>
                                                                 </DropdownMenuItem>
                                                             )}
@@ -414,7 +454,9 @@ export default function Hospitals({
                                                                         router.post(
                                                                             `/admin/hospitals/${h.id}/suspend`,
                                                                             {},
-                                                                            { preserveScroll: true },
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
                                                                         )
                                                                     }
                                                                 >
@@ -427,7 +469,9 @@ export default function Hospitals({
                                                                         router.post(
                                                                             `/admin/hospitals/${h.id}/activate`,
                                                                             {},
-                                                                            { preserveScroll: true },
+                                                                            {
+                                                                                preserveScroll: true,
+                                                                            },
                                                                         )
                                                                     }
                                                                 >
@@ -437,11 +481,16 @@ export default function Hospitals({
                                                             )}
                                                             <DropdownMenuSeparator />
                                                             <DropdownMenuItem
-                                                                onSelect={() => setConfirmDelete(h)}
+                                                                onSelect={() =>
+                                                                    setConfirmDelete(
+                                                                        h,
+                                                                    )
+                                                                }
                                                                 className="text-destructive focus:text-destructive"
                                                             >
                                                                 <Trash2 className="mr-2 h-4 w-4" />
-                                                                Delete hospital
+                                                                Delete
+                                                                hospital
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>
@@ -475,7 +524,8 @@ export default function Hospitals({
                     <DialogHeader>
                         <DialogTitle>Create hospital</DialogTitle>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Provisions a new tenant with its own schema, subdomain, and administrator.
+                            Provisions a new tenant with its own schema,
+                            subdomain, and administrator.
                         </p>
                     </DialogHeader>
                     <CreateForm
@@ -486,7 +536,10 @@ export default function Hospitals({
             </Dialog>
 
             {/* Detail dialog */}
-            <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+            <Dialog
+                open={!!detail}
+                onOpenChange={(o) => !o && setDetail(null)}
+            >
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     {detail && (
                         <DetailView
@@ -526,7 +579,12 @@ export default function Hospitals({
 
 /* ───────────── Subscription badge ───────────── */
 function SubscriptionBadge({ hospital }: { hospital: Hospital }) {
-    const { subscription_status, trial_days_left, trial_ends_at, current_period_end, can_access_system } = hospital;
+    const {
+        subscription_status,
+        trial_days_left,
+        current_period_end,
+        can_access_system,
+    } = hospital;
 
     if (!can_access_system) {
         return (
@@ -607,7 +665,9 @@ function EmptyState({
                 <Building2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
             </div>
             <h3 className="mt-4 text-base font-semibold">
-                {hasFilters ? 'No hospitals match your filters' : 'No hospitals yet'}
+                {hasFilters
+                    ? 'No hospitals match your filters'
+                    : 'No hospitals yet'}
             </h3>
             <p className="mt-1 max-w-sm text-sm text-muted-foreground">
                 {hasFilters
@@ -656,7 +716,11 @@ function DeleteConfirm({
 
                 <div className="grid gap-2">
                     <Label htmlFor="confirm">
-                        Type <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{hospital.id}</code> to confirm
+                        Type{' '}
+                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                            {hospital.id}
+                        </code>{' '}
+                        to confirm
                     </Label>
                     <Input
                         id="confirm"
@@ -705,7 +769,8 @@ function DetailView({
     plans: PlanSummary[];
     onClose: () => void;
 }) {
-    const displayName = hospital.name?.trim() || hospital.domains[0] || hospital.id;
+    const displayName =
+        hospital.name?.trim() || hospital.domains[0] || hospital.id;
     const active = hospital.status === 'active';
     const domain = hospital.domains[0]
         ? `${hospital.domains[0]}.${tenantBase}`
@@ -747,7 +812,9 @@ function DetailView({
                     />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <DialogTitle className="truncate">{displayName}</DialogTitle>
+                    <DialogTitle className="truncate">
+                        {displayName}
+                    </DialogTitle>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                         Created {relativeTime(hospital.created_at)}
                     </p>
@@ -801,11 +868,16 @@ function DetailView({
                                             hospital.plan.currency,
                                         )}{' '}
                                         /{' '}
-                                        {hospital.plan.billing_cycle === 'annual'
+                                        {hospital.plan.billing_cycle ===
+                                        'annual'
                                             ? 'year'
-                                            : hospital.plan.billing_cycle === 'semi_annual'
+                                            : hospital.plan
+                                                    .billing_cycle ===
+                                                'semi_annual'
                                               ? '6 months'
-                                              : hospital.plan.billing_cycle === 'quarterly'
+                                              : hospital.plan
+                                                      .billing_cycle ===
+                                                  'quarterly'
                                                 ? 'quarter'
                                                 : 'month'}
                                     </span>
@@ -816,12 +888,14 @@ function DetailView({
                                 value={
                                     <Badge
                                         variant={
-                                            hospital.subscription_status === 'active'
+                                            hospital.subscription_status ===
+                                            'active'
                                                 ? 'default'
                                                 : 'secondary'
                                         }
                                         className={
-                                            hospital.subscription_status === 'active'
+                                            hospital.subscription_status ===
+                                            'active'
                                                 ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300'
                                                 : ''
                                         }
@@ -869,6 +943,9 @@ function DetailView({
                         </p>
                     )}
                 </Section>
+
+                {/* Features */}
+                <FeaturesSection hospitalId={hospital.id} />
 
                 {/* Tenant */}
                 <Section title="Tenant">
@@ -1037,6 +1114,205 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
     );
 }
 
+/* ───────────── Features section ───────────── */
+type FeatureGroup = {
+    label: string;
+    features: Record<string, string>;
+};
+
+type FeaturesPayload = {
+    catalog: Record<string, FeatureGroup>;
+    resolved: Record<string, boolean>;
+    plan_features: string[];
+    overrides: Record<string, boolean>;
+    plan: { id: number; name: string } | null;
+};
+
+function FeaturesSection({ hospitalId }: { hospitalId: string }) {
+    const [data, setData] = useState<FeaturesPayload | null>(null);
+    const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+    const [saving, setSaving] = useState(false);
+    const [expanded, setExpanded] = useState(false);
+
+    const load = () => {
+        fetch(`/admin/hospitals/${hospitalId}/features`, {
+            headers: { Accept: 'application/json' },
+        })
+            .then((r) => r.json())
+            .then((d: FeaturesPayload) => {
+                setData(d);
+                setOverrides(d.resolved);
+            })
+            .catch(() => setData(null));
+    };
+
+    useEffect(() => {
+        load();
+    }, [hospitalId]);
+
+    const toggle = (key: string) => {
+        setOverrides((o) => ({ ...o, [key]: !o[key] }));
+    };
+
+    const save = () => {
+        if (!data) return;
+        setSaving(true);
+        router.post(
+            `/admin/hospitals/${hospitalId}/features`,
+            { overrides },
+            {
+                preserveScroll: true,
+                onFinish: () => {
+                    setSaving(false);
+                    load();
+                },
+            },
+        );
+    };
+
+    if (!data) {
+        return (
+            <Section title="Features">
+                <div className="flex items-center gap-2 py-2 text-xs text-muted-foreground">
+                    <LoaderCircle className="h-3 w-3 animate-spin" />
+                    Loading...
+                </div>
+            </Section>
+        );
+    }
+
+    const enabledCount = Object.values(overrides).filter(Boolean).length;
+    const totalCount = Object.keys(overrides).length;
+    const hasChanges =
+        JSON.stringify(overrides) !== JSON.stringify(data.resolved);
+
+    return (
+        <Section
+            title={`Features (${enabledCount} / ${totalCount})`}
+            action={
+                <button
+                    type="button"
+                    onClick={() => setExpanded((e) => !e)}
+                    className="text-[11px] font-medium text-primary hover:underline"
+                >
+                    {expanded ? 'Hide' : 'Customize'}
+                </button>
+            }
+        >
+            {!expanded ? (
+                <div className="space-y-1">
+                    {Object.entries(data.catalog).map(([groupKey, group]) => {
+                        const keys = Object.keys(group.features);
+                        const enabled = keys.filter((k) => overrides[k]).length;
+                        return (
+                            <div
+                                key={groupKey}
+                                className="flex items-center justify-between text-xs"
+                            >
+                                <span className="text-muted-foreground">
+                                    {group.label}
+                                </span>
+                                <span className="font-semibold tabular-nums">
+                                    {enabled} / {keys.length}
+                                </span>
+                            </div>
+                        );
+                    })}
+                </div>
+            ) : (
+                <div className="space-y-3">
+                    <p className="rounded-md bg-muted/50 px-2 py-1.5 text-[11px] text-muted-foreground">
+                        Inherited from plan:{' '}
+                        <span className="font-medium text-foreground">
+                            {data.plan?.name ?? 'None'}
+                        </span>
+                        . Deviations are stored as overrides.
+                    </p>
+
+                    {Object.entries(data.catalog).map(([groupKey, group]) => (
+                        <div
+                            key={groupKey}
+                            className="rounded-lg border bg-card"
+                        >
+                            <div className="border-b px-3 py-2">
+                                <span className="text-xs font-semibold">
+                                    {group.label}
+                                </span>
+                            </div>
+                            <div className="grid gap-1 p-2 sm:grid-cols-2">
+                                {Object.entries(group.features).map(
+                                    ([key, label]) => {
+                                        const checked = overrides[key] === true;
+                                        const fromPlan =
+                                            data.plan_features.includes(key);
+                                        const isOverride =
+                                            checked !== fromPlan;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={key}
+                                                onClick={() => toggle(key)}
+                                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition ${
+                                                    checked
+                                                        ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                                        : 'hover:bg-muted'
+                                                }`}
+                                            >
+                                                <div
+                                                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                                                        checked
+                                                            ? 'border-primary bg-primary text-primary-foreground'
+                                                            : 'border-border'
+                                                    }`}
+                                                >
+                                                    {checked && (
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                    )}
+                                                </div>
+                                                <span className="min-w-0 flex-1 truncate">
+                                                    {label}
+                                                </span>
+                                                {isOverride && (
+                                                    <span className="shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                                                        Override
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    },
+                                )}
+                            </div>
+                        </div>
+                    ))}
+
+                    {hasChanges && (
+                        <div className="flex justify-end gap-2 border-t pt-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setOverrides(data.resolved)}
+                                disabled={saving}
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                size="sm"
+                                onClick={save}
+                                disabled={saving}
+                            >
+                                {saving && (
+                                    <LoaderCircle className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                )}
+                                Save overrides
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </Section>
+    );
+}
+
 /* ───────────── Change plan dialog ───────────── */
 function ChangePlanDialog({
     open,
@@ -1124,11 +1400,15 @@ function ChangePlanDialog({
                                             )}
                                         </div>
                                         <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                            {formatPrice(p.price_yearly, p.currency)}{' '}
+                                            {formatPrice(
+                                                p.price_yearly,
+                                                p.currency,
+                                            )}{' '}
                                             {cycleLabel}
                                             {p.setup_fee > 0 && (
                                                 <>
-                                                    {' '}· +{' '}
+                                                    {' '}
+                                                    · +{' '}
                                                     {formatPrice(
                                                         p.setup_fee,
                                                         p.currency,
@@ -1166,9 +1446,9 @@ function ChangePlanDialog({
                                 Reset billing period
                             </div>
                             <p className="mt-0.5 text-[11px] text-muted-foreground">
-                                Immediately starts a new billing cycle from today.
-                                Leave unchecked to keep the current period and only
-                                change the plan tier.
+                                Immediately starts a new billing cycle from
+                                today. Leave unchecked to keep the current
+                                period and only change the plan tier.
                             </p>
                         </div>
                     </label>
@@ -1184,7 +1464,11 @@ function ChangePlanDialog({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={processing || !selected || selected === hospital.plan?.id}
+                            disabled={
+                                processing ||
+                                !selected ||
+                                selected === hospital.plan?.id
+                            }
                         >
                             {processing && (
                                 <LoaderCircle className="mr-1.5 h-4 w-4 animate-spin" />
@@ -1234,7 +1518,8 @@ function AddAdminDialog({
                 <DialogHeader>
                     <DialogTitle>Add administrator</DialogTitle>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        This user will have hospital admin access inside this tenant.
+                        This user will have hospital admin access inside this
+                        tenant.
                     </p>
                 </DialogHeader>
                 <form onSubmit={submit} className="mt-4 space-y-4">
@@ -1264,18 +1549,25 @@ function AddAdminDialog({
                             id="password"
                             type="password"
                             value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
+                            onChange={(e) =>
+                                setData('password', e.target.value)
+                            }
                         />
                         <InputError message={errors.password} />
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="password_confirmation">Confirm password</Label>
+                        <Label htmlFor="password_confirmation">
+                            Confirm password
+                        </Label>
                         <Input
                             id="password_confirmation"
                             type="password"
                             value={data.password_confirmation}
                             onChange={(e) =>
-                                setData('password_confirmation', e.target.value)
+                                setData(
+                                    'password_confirmation',
+                                    e.target.value,
+                                )
                             }
                         />
                     </div>
@@ -1309,10 +1601,18 @@ function CreateForm({
     plans: PlanSummary[];
     onSuccess: () => void;
 }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, reset } = useForm<{
+        name: string;
+        phone: string;
+        plan_id: number | null;
+        admin_name: string;
+        admin_email: string;
+        admin_password: string;
+        admin_password_confirmation: string;
+    }>({
         name: '',
         phone: '',
-        plan_id: plans[0]?.id ?? null,
+        plan_id: plans.length > 0 ? plans[0].id : null,
         admin_name: '',
         admin_email: '',
         admin_password: '',
@@ -1347,8 +1647,9 @@ function CreateForm({
                         />
                         <InputError message={errors.name} />
                         <p className="text-[11px] text-muted-foreground">
-                            Subdomain is generated from this name. Duplicates get
-                            a numeric suffix automatically (e.g. yalipital-2).
+                            Subdomain is generated from this name. Duplicates
+                            get a numeric suffix automatically (e.g.
+                            yalipital-2).
                         </p>
                     </div>
                     <div className="grid gap-2">
@@ -1368,7 +1669,9 @@ function CreateForm({
                             onChange={(e) =>
                                 setData(
                                     'plan_id',
-                                    e.target.value ? Number(e.target.value) : null,
+                                    e.target.value
+                                        ? Number(e.target.value)
+                                        : null,
                                 )
                             }
                             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
@@ -1402,7 +1705,9 @@ function CreateForm({
                         <Input
                             id="admin_name"
                             value={data.admin_name}
-                            onChange={(e) => setData('admin_name', e.target.value)}
+                            onChange={(e) =>
+                                setData('admin_name', e.target.value)
+                            }
                             placeholder="Jane Doe"
                         />
                         <InputError message={errors.admin_name} />
@@ -1413,7 +1718,9 @@ function CreateForm({
                             id="admin_email"
                             type="email"
                             value={data.admin_email}
-                            onChange={(e) => setData('admin_email', e.target.value)}
+                            onChange={(e) =>
+                                setData('admin_email', e.target.value)
+                            }
                             placeholder="admin@hospital.co.ke"
                         />
                         <InputError message={errors.admin_email} />
@@ -1424,7 +1731,9 @@ function CreateForm({
                             id="admin_password"
                             type="password"
                             value={data.admin_password}
-                            onChange={(e) => setData('admin_password', e.target.value)}
+                            onChange={(e) =>
+                                setData('admin_password', e.target.value)
+                            }
                         />
                         <InputError message={errors.admin_password} />
                     </div>
@@ -1437,7 +1746,10 @@ function CreateForm({
                             type="password"
                             value={data.admin_password_confirmation}
                             onChange={(e) =>
-                                setData('admin_password_confirmation', e.target.value)
+                                setData(
+                                    'admin_password_confirmation',
+                                    e.target.value,
+                                )
                             }
                         />
                     </div>

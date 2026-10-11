@@ -2,99 +2,91 @@
 
 namespace App\Providers;
 
-use App\Actions\Fortify\CreateNewUser;
-use App\Actions\Fortify\ResetUserPassword;
-use Illuminate\Cache\RateLimiting\Limit;
+use App\Http\Responses\LoginResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
-use Laravel\Fortify\Features;
+use Laravel\Fortify\Contracts\LoginResponse as LoginResponseContract;
 use Laravel\Fortify\Fortify;
 
 class FortifyServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
     public function register(): void
     {
         //
     }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        $this->configureActions();
-        $this->configureViews();
-        $this->configureRateLimiting();
-    }
+        /* ───────────── Views ───────────── */
 
-    /**
-     * Configure Fortify actions.
-     */
-    private function configureActions(): void
-    {
-        Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
-        Fortify::createUsersUsing(CreateNewUser::class);
-    }
+        Fortify::loginView(fn () => Inertia::render('auth/login', [
+            'canResetPassword' => Route::has('password.request'),
+            'status' => session('status'),
+        ]));
 
-    /**
-     * Configure Fortify views.
-     */
-    private function configureViews(): void
-    {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'status' => $request->session()->get('status'),
+        Fortify::registerView(fn () => Inertia::render('auth/register', [
+            'passwordRules' => $this->passwordRulesString(),
+        ]));
+
+        Fortify::requestPasswordResetLinkView(fn () => Inertia::render('auth/forgot-password', [
+            'status' => session('status'),
         ]));
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,
             'token' => $request->route('token'),
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
+            'passwordRules' => $this->passwordRulesString(),
         ]));
 
-        Fortify::requestPasswordResetLinkView(fn (Request $request) => Inertia::render('auth/forgot-password', [
-            'status' => $request->session()->get('status'),
+        Fortify::verifyEmailView(fn () => Inertia::render('auth/verify-email', [
+            'status' => session('status'),
         ]));
 
-        Fortify::verifyEmailView(fn (Request $request) => Inertia::render('auth/verify-email', [
-            'status' => $request->session()->get('status'),
-        ]));
-
-        Fortify::registerView(fn () => Inertia::render('auth/register', [
-            'passwordRules' => Password::defaults()->toPasswordRulesString(),
-        ]));
+        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
 
         Fortify::twoFactorChallengeView(fn () => Inertia::render('auth/two-factor-challenge'));
 
-        Fortify::confirmPasswordView(fn () => Inertia::render('auth/confirm-password'));
+        /* ───────────── Custom login response ───────────── */
+
+        /*
+        | Fortify resolves its LoginResponse contract from the container
+        | immediately after a successful password login. By binding our own
+        | implementation, we intercept that moment to issue the email OTP
+        | challenge instead of completing the sign-in.
+        |
+        | Note: passkey logins use a separate controller
+        | (Laravel\Passkeys\Http\Controllers\PasskeyLoginController) which
+        | calls the guard directly. It never reaches this response, so
+        | passkey users skip OTP automatically.
+        */
+
+        $this->app->singleton(
+            LoginResponseContract::class,
+            LoginResponse::class,
+        );
     }
 
     /**
-     * Configure rate limiting.
+     * Returns a pipe-delimited rule string for the frontend `passwordrules`
+     * attribute, derived from the current Laravel password policy.
      */
-    private function configureRateLimiting(): void
+    private function passwordRulesString(): string
     {
-        RateLimiter::for('two-factor', function (Request $request) {
-            return Limit::perMinute(5)->by($request->session()->get('login.id'));
-        });
+        $rules = Password::min(8)
+            ->mixedCase()
+            ->numbers()
+            ->uncompromised();
 
-        RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
-
-            return Limit::perMinute(5)->by($throttleKey);
-        });
-
-        RateLimiter::for('passkeys', function (Request $request) {
-            return Limit::perMinute(10)->by(
-                ($request->input('credential.id') ?: $request->session()->getId()).'|'.$request->ip(),
-            );
-        });
+        // The default Password rule exposes a `__toString()` for the
+        // `passwordrules` HTML attribute. Fall back to a sensible static
+        // string if the version in use doesn't support it.
+        try {
+            return (string) $rules;
+        } catch (\Throwable) {
+            return 'minlength: 8; required: lower; required: upper; required: digit;';
+        }
     }
 }
