@@ -9,6 +9,7 @@ import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import MarketingLayout from '@/layouts/marketing-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import TenantLayout from '@/layouts/tenant-layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'YaliHealth';
 
@@ -26,18 +27,19 @@ void createInertiaApp({
             case name.startsWith('admin/'):
                 return AdminLayout;
 
-            // Full-screen loading screen — no chrome
             case name === 'auth/redirecting':
                 return null;
-
             case name.startsWith('auth/'):
                 return AuthLayout;
 
             case name.startsWith('settings/'):
-                return [AppLayout, SettingsLayout];
+                return [TenantLayout, SettingsLayout];
+
+            case name.startsWith('tenant/'):
+                return TenantLayout;
 
             default:
-                return AppLayout;
+                return TenantLayout;
         }
     },
     strictMode: true,

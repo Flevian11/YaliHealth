@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Auth\AdoptSessionController;
 use App\Http\Controllers\Auth\EmailOtpController;
+use App\Http\Controllers\Tenant\AnnouncementsController;
+use App\Http\Controllers\Tenant\AnnouncementsPageController;
+use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\PatientController;
 use App\Http\Controllers\Tenant\StaffAccessController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
@@ -24,12 +28,20 @@ Route::middleware([
     Route::post('auth/verify-otp/resend', [EmailOtpController::class, 'resend'])->name('auth.verify-otp.resend');
     Route::post('auth/verify-otp/cancel', [EmailOtpController::class, 'cancel'])->name('auth.verify-otp.cancel');
 
-    // Staff cannot self-register. Show the hospital admin's contact info instead.
     Route::get('register', [StaffAccessController::class, 'show'])->name('register');
 
     Route::middleware(['auth', 'verified', 'tenant.active'])->group(function () {
-        Route::get('/', fn () => 'Tenant dashboard — ' . tenant('id'))->name('tenant.home');
-        Route::get('dashboard', fn () => 'Tenant dashboard — ' . tenant('id'))->name('tenant.dashboard');
+        Route::get('/', [DashboardController::class, 'index'])->name('tenant.home');
+        Route::get('dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
+
+        Route::get('announcements', [AnnouncementsPageController::class, 'index'])->name('announcements.index');
+        Route::get('announcements/recent', [AnnouncementsController::class, 'recent'])->name('announcements.recent');
+
+        Route::get('patients', [PatientController::class, 'index'])->name('patients.index');
+        Route::post('patients', [PatientController::class, 'store'])->name('patients.store');
+
+        // Our landing settings page — must be declared BEFORE settings.php
+        Route::inertia('settings', 'tenant/Settings')->name('settings.index');
     });
 
     require __DIR__ . '/settings.php';

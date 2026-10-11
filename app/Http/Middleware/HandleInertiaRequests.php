@@ -3,6 +3,8 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\Features;
+use App\Support\TenantPermissions;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -17,27 +19,29 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
-                return [
+        $tenant = tenant();
+        $superAdmin = $request->user('super_admin');
+        $tenantUser = $tenant ? $request->user() : null;
+
+        return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ?? $request->user('super_admin'),
+                'user' => $superAdmin ?? $tenantUser,
             ],
             'theme' => fn () => Setting::theme(),
-            'features' => function () {
-                $tenant = tenant();
-                return $tenant ? \App\Support\Features::for($tenant) : null;
-            },
+            'features' => fn () => $tenant ? Features::for($tenant) : null,
+            'tenant_permissions' => fn () => $tenantUser
+                ? TenantPermissions::forRole($tenantUser->role)
+                : [],
+            'tenant_role' => fn () => $tenantUser?->role,
+            'hospital' => fn () => $tenant ? [
+                'id' => $tenant->id,
+                'name' => $tenant->name ?? $tenant->id,
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
-            ],
-                        'auth' => [
-                'user' => $request->user() ?? $request->user('super_admin'),
-                'permissions' => function () use ($request) {
-                    $admin = $request->user('super_admin');
-                    return $admin ? $admin->permissions() : [];
-                },
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
