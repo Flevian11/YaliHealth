@@ -1,0 +1,5 @@
+{
+  "claim_number": "CLM-{{request_id}}",
+  "status": "SUBMITTED",
+  "submitted_at": "{{now}}"
+}

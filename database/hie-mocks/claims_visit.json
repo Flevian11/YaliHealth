@@ -1,0 +1,6 @@
+{
+  "consent_token": "{{consent_token}}",
+  "hie_visit_ref": "VISIT-{{request_id}}",
+  "status": "CREATED",
+  "created_at": "{{now}}"
+}

@@ -1,0 +1,17 @@
+{
+  "alive": true,
+  "otpConsentPermitted": true,
+  "biometricsEnforced": false,
+  "results": [
+    {
+      "scheme": "SHIF",
+      "status": "ACTIVE",
+      "memberNumber": "SHA-8471-9923",
+      "effectiveFrom": "2025-07-01"
+    },
+    {
+      "scheme": "ECCIF",
+      "status": "ACTIVE"
+    }
+  ]
+}

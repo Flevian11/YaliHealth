@@ -1,0 +1,5 @@
+{
+  "preauth_code": "PA-{{request_id}}",
+  "status": "FINALISED",
+  "finalised_at": "{{now}}"
+}

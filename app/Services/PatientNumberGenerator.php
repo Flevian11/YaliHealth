@@ -2,58 +2,92 @@
 
 namespace App\Services;
 
+use App\Models\Patient;
 use App\Models\Tenant;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PatientNumberGenerator
 {
     /**
-     * Generate the next patient number for the current tenant.
-     * Format: {PREFIX}-{YEAR}-{SEQUENCE}
-     * Example: KAK-2026-00042
+     * Character set excludes confusable characters:
+     * 0/O, 1/I/L are omitted so codes survive phone calls,
+     * handwriting, and OCR.
+     */
+    private const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+    private const CODE_LENGTH = 10;
+
+    private const MAX_ATTEMPTS = 10;
+
+    /**
+     * Generate a unique patient number for the current tenant.
+     *
+     * Format: {FACILITY}-{10 CHAR CODE}
+     * Example: KAK-QJK7Y2X9M3
      */
     public function next(): string
     {
-        $tenant = tenant();
-        $prefix = $this->facilityPrefix($tenant);
-        $year = now()->year;
+        $prefix = $this->facilityPrefix(tenant());
 
-        $sequence = DB::transaction(function () use ($year) {
-            $row = DB::table('patient_number_sequences')
-                ->where('year', $year)
-                ->lockForUpdate()
-                ->first();
+        for ($attempt = 0; $attempt < self::MAX_ATTEMPTS; $attempt++) {
+            $code = $this->generateCode();
+            $number = "{$prefix}-{$code}";
 
-            if (! $row) {
-                $id = DB::table('patient_number_sequences')->insertGetId([
-                    'year' => $year,
-                    'last_number' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ]);
-                return 1;
+            if (! $this->exists($number)) {
+                return $number;
             }
+        }
 
-            $next = $row->last_number + 1;
-            DB::table('patient_number_sequences')
-                ->where('id', $row->id)
-                ->update(['last_number' => $next, 'updated_at' => now()]);
-
-            return $next;
-        });
-
-        return sprintf('%s-%d-%05d', $prefix, $year, $sequence);
+        // Fallback: if all attempts collided (essentially never), append
+        // an extra character to increase entropy.
+        return "{$prefix}-" . $this->generateCode() . random_int(0, 9);
     }
 
+    private function generateCode(): string
+    {
+        $maxIndex = strlen(self::ALPHABET) - 1;
+        $code = '';
+
+        for ($i = 0; $i < self::CODE_LENGTH; $i++) {
+            $code .= self::ALPHABET[random_int(0, $maxIndex)];
+        }
+
+        return $code;
+    }
+
+    private function exists(string $number): bool
+    {
+        return Patient::where('patient_number', $number)->exists();
+    }
+
+    /**
+     * Derive a short facility prefix from the tenant.
+     * "Kakamega County Hospital" → KAK
+     * "Nairobi West Hospital"    → NAI
+     * "yalipital_2"              → YAL
+     * Falls back to "PAT" if we can't derive anything.
+     */
     private function facilityPrefix(?Tenant $tenant): string
     {
-        if (! $tenant) return 'PAT';
+        if (! $tenant) {
+            return 'PAT';
+        }
 
-        // Prefer the admin-defined prefix, fall back to a truncated slug
+        // Prefer the tenant's configured prefix if set
+        $configured = $tenant->facility_prefix ?? null;
+        if (is_string($configured) && $configured !== '') {
+            return strtoupper(substr($configured, 0, 3));
+        }
+
         $name = $tenant->name ?? $tenant->id;
-        $parts = preg_split('/\s+/', trim($name));
-        $prefix = strtoupper(substr($parts[0] ?? 'PAT', 0, 3));
 
-        return preg_replace('/[^A-Z0-9]/', '', $prefix) ?: 'PAT';
+        // Take the first word of the hospital name, or fall back to the slug
+        $parts = preg_split('/[\s_\-]+/', trim((string) $name));
+        $first = $parts[0] ?? 'PAT';
+
+        $prefix = strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $first), 0, 3));
+
+        return $prefix ?: 'PAT';
     }
 }

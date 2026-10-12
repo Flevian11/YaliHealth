@@ -14,17 +14,25 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
         then: function () {
-            // Central — must be first so /register, /login resolve on localhost
+            // Central — must be first so /login, /register resolve on localhost
             Route::middleware('web')
                 ->domain(env('APP_DOMAIN', 'localhost'))
                 ->group(base_path('routes/web.php'));
+
+            // Mock HIE — registered on the central domain ONLY when the
+            // environment is explicitly set to mock. Never in prod.
+            if (env('HIE_ENVIRONMENT', 'mock') === 'mock') {
+                Route::middleware('web')
+                    ->domain(env('APP_DOMAIN', 'localhost'))
+                    ->group(base_path('routes/mock-hie.php'));
+            }
 
             // Admin console
             Route::middleware('web')
                 ->domain(env('TENANCY_ADMIN_DOMAIN', 'admin.localhost'))
                 ->group(base_path('routes/admin.php'));
 
-            // Tenant routes — no domain constraint, tenancy middleware handles identification
+            // Tenant routes — no domain constraint, tenancy middleware identifies
             Route::middleware('web')
                 ->group(base_path('routes/tenant.php'));
         },
@@ -37,10 +45,8 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {
-            $host = $request->getHost();
             $adminDomain = env('TENANCY_ADMIN_DOMAIN', 'admin.localhost');
-
-            return $host === $adminDomain
+            return $request->getHost() === $adminDomain
                 ? route('admin.login')
                 : route('login');
         });

@@ -1,0 +1,5 @@
+{
+  "status": "sent",
+  "message": "OTP sent to the patient's confirmed contact.",
+  "expires_in": 300
+}

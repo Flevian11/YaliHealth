@@ -1,0 +1,9 @@
+{
+  "patient_id": "{{patient_id}}",
+  "count": 3,
+  "results": [
+    { "sub_benefit_code": "SHA-06", "name": "Outpatient Care", "status": "ACTIVE" },
+    { "sub_benefit_code": "SHA-09", "name": "Imaging Services", "status": "ACTIVE" },
+    { "sub_benefit_code": "SHA-12", "name": "Renal Care", "status": "ACTIVE" }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "status": "complete",
+  "invoice_number": "INV-{{request_id}}",
+  "total_amount": 4500,
+  "line_items": 1,
+  "warnings": [],
+  "ready_to_submit": true
+}

@@ -1,0 +1,78 @@
+{
+  "patient_id": "{{patient_id}}",
+  "count": 6,
+  "results": [
+    {
+      "intervention_code": "SHA-01-001",
+      "name": "General Outpatient Consultation",
+      "fund": "UHC",
+      "paymentMechanism": "CAPITATION",
+      "needsPreauth": false,
+      "needsManualPreauthApproval": false,
+      "accessPoint": "OP",
+      "level2Tariff": 500,
+      "level3Tariff": 800,
+      "level4Tariff": 1200,
+      "level5Tariff": 1800,
+      "level6Tariff": 2500
+    },
+    {
+      "intervention_code": "SHA-01-005",
+      "name": "Emergency Casualty Attendance",
+      "fund": "ECCIF",
+      "paymentMechanism": "FEE_FOR_SERVICE",
+      "needsPreauth": false,
+      "needsManualPreauthApproval": false,
+      "accessPoint": "OP",
+      "level2Tariff": 3000,
+      "level3Tariff": 4000,
+      "level4Tariff": 6000,
+      "level5Tariff": 8000,
+      "level6Tariff": 12000
+    },
+    {
+      "intervention_code": "SHA-06-021",
+      "name": "Oncology Chemotherapy Session",
+      "fund": "SHIF",
+      "paymentMechanism": "FEE_FOR_SERVICE",
+      "needsPreauth": true,
+      "needsManualPreauthApproval": true,
+      "requiresOncologyPreauth": true,
+      "accessPoint": "OP",
+      "level5Tariff": 45000
+    },
+    {
+      "intervention_code": "SHA-09-001",
+      "name": "Imaging — CT Scan Head",
+      "fund": "SHIF",
+      "paymentMechanism": "FEE_FOR_SERVICE",
+      "needsPreauth": true,
+      "needsManualPreauthApproval": false,
+      "requiresRadiologyPreauth": true,
+      "accessPoint": "OP",
+      "level5Tariff": 15000
+    },
+    {
+      "intervention_code": "SHA-12-001",
+      "name": "Renal Dialysis Session",
+      "fund": "SHIF",
+      "paymentMechanism": "FEE_FOR_SERVICE",
+      "needsPreauth": true,
+      "needsManualPreauthApproval": false,
+      "requiresRenalPreauth": true,
+      "accessPoint": "OP",
+      "level5Tariff": 9500
+    },
+    {
+      "intervention_code": "SHA-02-001",
+      "name": "Inpatient Per Diem — General Ward",
+      "fund": "SHIF",
+      "paymentMechanism": "PER_DIEM",
+      "needsPreauth": false,
+      "accessPoint": "IP",
+      "level4Tariff": 3500,
+      "level5Tariff": 4500,
+      "level6Tariff": 6000
+    }
+  ]
+}

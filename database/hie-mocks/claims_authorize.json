@@ -1,0 +1,7 @@
+{
+  "guid": "{{auth_guid}}",
+  "token": "{{consent_token}}",
+  "status": "PENDING",
+  "iframe_url": "http://localhost:8000/mock-hie/biometric-iframe?guid={{auth_guid}}",
+  "expires_in": 600
+}

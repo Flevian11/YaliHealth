@@ -1,0 +1,19 @@
+{
+  "count": 2,
+  "results": [
+    {
+      "id": 675590,
+      "contactValue": "+254714***898",
+      "contactType": "PHO",
+      "isConfirmed": true,
+      "active": true
+    },
+    {
+      "id": 675591,
+      "contactValue": "+254722***134",
+      "contactType": "PHO",
+      "isConfirmed": true,
+      "active": true
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "preauth_code": "PA-{{request_id}}",
+  "status": "PENDING_DOCTOR_APPROVAL",
+  "created_at": "{{now}}"
+}
