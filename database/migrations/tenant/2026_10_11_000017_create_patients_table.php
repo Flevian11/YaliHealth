@@ -10,28 +10,44 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
+
+            // Local identity — the primary key for everything in this tenant
             $table->string('patient_number', 40)->unique();
 
+            // Local demographics (always present)
             $table->string('first_name');
             $table->string('middle_name')->nullable();
             $table->string('last_name');
             $table->date('date_of_birth')->nullable();
             $table->string('gender', 20)->nullable();
 
+            // Contact (always present, may be partial)
             $table->string('phone', 40)->nullable();
             $table->string('email')->nullable();
-            $table->string('national_id', 40)->nullable();
-            $table->string('sha_id', 60)->nullable();
-            $table->string('cr_number', 60)->nullable(); // HIE client registry id
-
-            $table->string('insurance_type', 30)->default('cash'); // cash, sha, private
             $table->string('county')->nullable();
             $table->string('village')->nullable();
 
+            // National identity (may or may not resolve)
+            $table->string('national_id', 40)->nullable();
+            $table->string('sha_id', 60)->nullable();
+            $table->string('cr_number', 60)->nullable();  // HIE Client Registry ID
+
+            // Verification state — the badge the receptionist sees
+            $table->string('verification_status', 20)->default('local_only');
+            // local_only | unverified | verified | not_found | failed
+            $table->unsignedSmallInteger('verification_attempts')->default(0);
+            $table->timestamp('last_verified_at')->nullable();
+            $table->text('last_verification_error')->nullable();
+
+            // Clinical notes captured at registration
             $table->jsonb('next_of_kin')->default('{}');
             $table->jsonb('allergies')->default('[]');
             $table->text('notes')->nullable();
 
+            // Duplicate handling
+            $table->unsignedBigInteger('merged_into_id')->nullable();
+
+            // Audit
             $table->unsignedBigInteger('registered_by')->nullable();
             $table->timestamp('first_visit_at')->nullable();
             $table->timestamps();
@@ -40,22 +56,14 @@ return new class extends Migration
             $table->index('national_id');
             $table->index('phone');
             $table->index('cr_number');
+            $table->index('verification_status');
             $table->index('first_visit_at');
-        });
-
-        // Sequence counter for patient numbers per tenant
-        Schema::create('patient_number_sequences', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedInteger('year');
-            $table->unsignedBigInteger('last_number')->default(0);
-            $table->timestamps();
-            $table->unique('year');
+            $table->index('merged_into_id');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('patient_number_sequences');
         Schema::dropIfExists('patients');
     }
 };

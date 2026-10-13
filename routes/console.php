@@ -5,6 +5,11 @@ use Illuminate\Support\Facades\Artisan;
 use App\Jobs\RunApiHealthChecks;
 use Illuminate\Support\Facades\Schedule;
 
+Schedule::command('patients:reconcile-all')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->onOneServer();
+
 
 Schedule::job(new RunApiHealthChecks)
     ->everyFiveMinutes()

@@ -37,10 +37,14 @@ Route::middleware([
         Route::get('announcements', [AnnouncementsPageController::class, 'index'])->name('announcements.index');
         Route::get('announcements/recent', [AnnouncementsController::class, 'recent'])->name('announcements.recent');
 
-        Route::get('patients', [PatientController::class, 'index'])->name('patients.index');
-        Route::post('patients', [PatientController::class, 'store'])->name('patients.store');
+        Route::prefix('patients')->name('patients.')->group(function () {
+            Route::get('/', [PatientController::class, 'index'])->name('index');
+            Route::get('check-duplicates', [PatientController::class, 'checkDuplicates'])->name('check-duplicates');
+            Route::post('/', [PatientController::class, 'store'])->name('store');
+            Route::get('{patient}', [PatientController::class, 'show'])->name('show');
+            Route::post('{patient}/upgrade', [PatientController::class, 'upgrade'])->name('upgrade');
+        });
 
-        // Our landing settings page — must be declared BEFORE settings.php
         Route::inertia('settings', 'tenant/Settings')->name('settings.index');
     });
 
