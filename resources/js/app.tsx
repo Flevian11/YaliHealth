@@ -27,8 +27,12 @@ void createInertiaApp({
             case name.startsWith('admin/'):
                 return AdminLayout;
 
+            // Standalone auth screens — no AuthLayout wrapper
             case name === 'auth/redirecting':
+            case name === 'auth/AcceptInvitation':
+            case name === 'auth/InvitationInvalid':
                 return null;
+
             case name.startsWith('auth/'):
                 return AuthLayout;
 

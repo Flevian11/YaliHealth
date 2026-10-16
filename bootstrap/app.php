@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        commands: __DIR__.'/../routes/console.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
         then: function () {
             // Central — must be first so /login, /register resolve on localhost
@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.active' => \App\Http\Middleware\EnsureTenantIsActive::class,
             'feature' => \App\Http\Middleware\EnsureFeatureEnabled::class,
             'perm' => \App\Http\Middleware\EnsureSuperAdminHasPermission::class,
+            'tenant.perm' => \App\Http\Middleware\EnsureTenantPermission::class,
         ]);
 
         $middleware->redirectGuestsTo(function (Request $request) {
@@ -61,6 +62,6 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
-            fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
+            fn(Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
     })->create();

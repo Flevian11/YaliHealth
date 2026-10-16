@@ -193,8 +193,8 @@ const navGroups: NavGroup[] = [
         items: [
             {
                 label: 'Staff & Users',
+                href: '/staff',
                 icon: UserCog,
-                soon: true,
                 permission: 'staff.manage',
             },
             {
@@ -276,9 +276,8 @@ function SidebarNav({
                                         title={
                                             collapsed ? item.label : undefined
                                         }
-                                        className={`flex cursor-not-allowed items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/60 ${
-                                            collapsed ? 'justify-center' : ''
-                                        }`}
+                                        className={`flex cursor-not-allowed items-center gap-3 rounded-lg px-2.5 py-2 text-sm text-muted-foreground/60 ${collapsed ? 'justify-center' : ''
+                                            }`}
                                     >
                                         <item.icon className="h-4 w-4 shrink-0" />
                                         {!collapsed && (
@@ -301,21 +300,19 @@ function SidebarNav({
                                     href={item.href!}
                                     onClick={onNavigate}
                                     title={collapsed ? item.label : undefined}
-                                    className={`relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition ${
-                                        active
+                                    className={`relative flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition ${active
                                             ? 'bg-emerald-50 font-medium text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300'
                                             : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                                    } ${collapsed ? 'justify-center' : ''}`}
+                                        } ${collapsed ? 'justify-center' : ''}`}
                                 >
                                     {active && !collapsed && (
                                         <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-emerald-500" />
                                     )}
                                     <item.icon
-                                        className={`h-4 w-4 shrink-0 ${
-                                            active
+                                        className={`h-4 w-4 shrink-0 ${active
                                                 ? 'text-emerald-600 dark:text-emerald-400'
                                                 : ''
-                                        }`}
+                                            }`}
                                     />
                                     {!collapsed && (
                                         <span className="truncate">
@@ -465,9 +462,8 @@ export default function TenantLayout({ children }: { children: ReactNode }) {
         <div className="flex min-h-svh bg-muted/40">
             {!isMobile && (
                 <aside
-                    className={`sticky top-0 flex h-svh shrink-0 flex-col border-r bg-card transition-[width] duration-200 ${
-                        collapsed ? 'w-[72px]' : 'w-[260px]'
-                    }`}
+                    className={`sticky top-0 flex h-svh shrink-0 flex-col border-r bg-card transition-[width] duration-200 ${collapsed ? 'w-[72px]' : 'w-[260px]'
+                        }`}
                 >
                     <div className="flex h-16 shrink-0 items-center justify-between border-b px-3">
                         <div className="flex items-center gap-2.5 overflow-hidden">

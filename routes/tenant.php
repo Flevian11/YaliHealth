@@ -9,6 +9,8 @@ use App\Http\Controllers\Tenant\AnnouncementsPageController;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\PatientController;
 use App\Http\Controllers\Tenant\StaffAccessController;
+use App\Http\Controllers\Tenant\StaffController;
+use App\Http\Controllers\Tenant\StaffInvitationController;
 use App\Http\Controllers\Tenant\VisitController;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyBySubdomain;
@@ -19,6 +21,13 @@ Route::middleware([
     InitializeTenancyBySubdomain::class,
     PreventAccessFromCentralDomains::class,
 ])->group(function () {
+
+    /* ═══════════════════════════════════════════════════════════════════
+       PUBLIC TENANT ROUTES
+       ═══════════════════════════════════════════════════════════════════
+       No `auth` middleware, but still inside the tenancy group so tenant
+       context is initialized before the controller touches the DB.
+    */
 
     Route::get('auth/adopt/{token}', AdoptSessionController::class)
         ->name('auth.adopt')
@@ -31,12 +40,60 @@ Route::middleware([
 
     Route::get('register', [StaffAccessController::class, 'show'])->name('register');
 
+    /*
+    |----------------------------------------------------------------------
+    | Staff invitation acceptance
+    |----------------------------------------------------------------------
+    |
+    | Deliberately public — the token IS the credential. Runs inside the
+    | tenant group so InitializeTenancyBySubdomain has already switched
+    | the DB connection before the controller reads staff_invitations.
+    |
+    | Note the ordering: literal segments must precede any {user} wildcard
+    | declared elsewhere in the tenant namespace. These accept routes are
+    | also distinct from /staff/{user}/... above because they use a
+    | dedicated prefix (staff/accept) that does not collide.
+    |
+    */
+
+    Route::get('staff/accept/{token}', [StaffInvitationController::class, 'show'])
+        ->name('staff.accept')
+        ->where('token', '[A-Za-z0-9]+');
+
+    Route::post('staff/accept/{token}', [StaffInvitationController::class, 'accept'])
+        ->name('staff.accept.submit')
+        ->where('token', '[A-Za-z0-9]+');
+
+    /* ═══════════════════════════════════════════════════════════════════
+       AUTHENTICATED TENANT ROUTES
+       ═══════════════════════════════════════════════════════════════════ */
+
     Route::middleware(['auth', 'verified', 'tenant.active'])->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('tenant.home');
         Route::get('dashboard', [DashboardController::class, 'index'])->name('tenant.dashboard');
 
         Route::get('announcements', [AnnouncementsPageController::class, 'index'])->name('announcements.index');
         Route::get('announcements/recent', [AnnouncementsController::class, 'recent'])->name('announcements.recent');
+
+        /*
+        |----------------------------------------------------------------------
+        | Staff & Users
+        |----------------------------------------------------------------------
+        |
+        | RBAC: only users with `staff.manage` can access these routes.
+        | Enforced by EnsureTenantPermission via the `tenant.perm` alias.
+        |
+        */
+
+        Route::prefix('staff')->name('staff.')
+            ->middleware('tenant.perm:staff.manage')
+            ->group(function () {
+                Route::get('/', [StaffController::class, 'index'])->name('index');
+                Route::post('/', [StaffController::class, 'store'])->name('store');
+                Route::post('{user}/role', [StaffController::class, 'updateRole'])->name('role.update');
+                Route::post('{user}/toggle', [StaffController::class, 'toggleActive'])->name('toggle');
+                Route::post('{user}/send-reset', [StaffController::class, 'sendReset'])->name('send-reset');
+            });
 
         /*
         |----------------------------------------------------------------------
@@ -110,7 +167,6 @@ Route::middleware([
             Route::post('{visit}/lines', [VisitController::class, 'addLine'])->name('lines');
             Route::post('{visit}/attachments', [VisitController::class, 'uploadAttachment'])->name('attachments.upload');
             Route::post('{visit}/preview', [VisitController::class, 'preview'])->name('preview');
-
             Route::post('{visit}/diagnoses', [VisitController::class, 'addDiagnosis'])->name('diagnoses.add');
 
             // Visit-end consent
