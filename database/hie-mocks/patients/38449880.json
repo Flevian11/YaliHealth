@@ -1,0 +1,30 @@
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "CR-38449880",
+      "identificationNumber": "38449880",
+      "identificationType": "National ID",
+      "firstName": "Flevian",
+      "middleName": null,
+      "lastName": "Ochoka",
+      "dateOfBirth": "1990-01-15",
+      "gender": "male",
+      "phone": "+254714000898",
+      "shaId": "SHA-0001-0001",
+      "alive": true,
+      "dependants": [
+        {
+          "id": "CR-38449880-D01",
+          "firstName": "Yasmin",
+          "middleName": null,
+          "lastName": "Aaliyah",
+          "dateOfBirth": "2015-06-12",
+          "gender": "female",
+          "relationship": "Daughter",
+          "alive": true
+        }
+      ]
+    }
+  ]
+}

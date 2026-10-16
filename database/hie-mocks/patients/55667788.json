@@ -1,0 +1,50 @@
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "CR-55667788",
+      "identificationNumber": "55667788",
+      "identificationType": "National ID",
+      "firstName": "Grace",
+      "middleName": "Nyambura",
+      "lastName": "Wanjiru",
+      "dateOfBirth": "1982-05-09",
+      "gender": "female",
+      "phone": "+254733444555",
+      "shaId": "SHA-4401-8877",
+      "alive": true,
+      "dependants": [
+        {
+          "id": "CR-55667788-D01",
+          "firstName": "Brian",
+          "middleName": null,
+          "lastName": "Wanjiru",
+          "dateOfBirth": "2008-02-14",
+          "gender": "male",
+          "relationship": "Son",
+          "alive": true
+        },
+        {
+          "id": "CR-55667788-D02",
+          "firstName": "Cynthia",
+          "middleName": null,
+          "lastName": "Wanjiru",
+          "dateOfBirth": "2012-09-30",
+          "gender": "female",
+          "relationship": "Daughter",
+          "alive": true
+        },
+        {
+          "id": "CR-55667788-D03",
+          "firstName": "Ethan",
+          "middleName": null,
+          "lastName": "Wanjiru",
+          "dateOfBirth": "2019-01-03",
+          "gender": "male",
+          "relationship": "Son",
+          "alive": true
+        }
+      ]
+    }
+  ]
+}

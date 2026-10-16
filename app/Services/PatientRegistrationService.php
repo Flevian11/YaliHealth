@@ -7,48 +7,94 @@ use App\Services\Hie\HieClient;
 use App\Support\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\Hie\HieException;
+use App\Services\Hie\RegistryService;
 
 class PatientRegistrationService
 {
     public function __construct(
         private PatientNumberGenerator $numbers,
-        private HieClient $hie,
+        private RegistryService $registry,
     ) {}
 
     /**
      * Register a patient as SHA-seeking. Attempts MPI lookup; falls
      * back to unverified if HIE is unreachable.
      */
+    /**
+     * Register a patient as SHA-seeking.
+     *
+     * Idempotent by CR number: if a local patient already has the
+     * resolved CR, that record is returned untouched.
+     *
+     * @param  array  $data  Form data. May include 'resolved_cr_number',
+     *                       'resolved_principal_cr_number', 'resolved_principal_name',
+     *                       'resolved_relationship' when the UI has already
+     *                       performed a lookup and the operator picked a record.
+     */
     public function registerWithSha(array $data): Patient
     {
-        $data['verification_status'] = 'unverified';
-        $data['verification_attempts'] = 1;
+        // If the UI resolved an identity, trust it; else do an MPI lookup.
+        if (! empty($data['resolved_cr_number'])) {
+            $mpiResult = [
+                'success' => true,
+                'not_found' => false,
+                'cr_number' => $data['resolved_cr_number'],
+                'principal_cr_number' => $data['resolved_principal_cr_number'] ?? null,
+                'principal_name' => $data['resolved_principal_name'] ?? null,
+                'relationship_to_principal' => $data['resolved_relationship'] ?? null,
+                'record' => null,
+                'error' => null,
+            ];
+        } else {
+            $mpiResult = $this->tryMpiLookup($data);
+        }
 
-        // Attempt MPI lookup first — but never block registration on it
-        $mpiResult = $this->tryMpiLookup($data);
+        // Idempotence: if the CR already exists locally, return that patient.
+        if ($mpiResult['success'] && ! empty($mpiResult['cr_number'])) {
+            $existing = Patient::where('cr_number', $mpiResult['cr_number'])
+                ->notMerged()
+                ->first();
+
+            if ($existing) {
+                AuditLogger::log('patient.lookup.duplicate_prevented', [
+                    'cr_number' => $mpiResult['cr_number'],
+                    'existing_patient_id' => $existing->id,
+                ]);
+
+                return $existing;
+            }
+        }
 
         $patient = DB::transaction(function () use ($data, $mpiResult) {
             $attributes = $this->baseAttributes($data);
             $attributes['patient_number'] = $this->numbers->next();
 
-            // If MPI succeeded, upgrade immediately
             if ($mpiResult['success']) {
                 $attributes['cr_number'] = $mpiResult['cr_number'];
                 $attributes['verification_status'] = 'verified';
                 $attributes['last_verified_at'] = now();
                 $attributes['verification_attempts'] = 1;
 
-                // Enrich with HIE-returned data
-                foreach (['sha_id', 'phone', 'date_of_birth', 'gender'] as $field) {
-                    if (! empty($mpiResult['record'][$field]) && empty($attributes[$field])) {
-                        $attributes[$field] = $mpiResult['record'][$field];
+                // Dependant linkage
+                $attributes['principal_cr_number'] = $mpiResult['principal_cr_number'] ?? null;
+                $attributes['principal_name'] = $mpiResult['principal_name'] ?? null;
+                $attributes['relationship_to_principal'] = $mpiResult['relationship_to_principal'] ?? null;
+
+                // Enrich from MPI record when the UI didn't already fill these
+                if ($mpiResult['record']) {
+                    foreach (['sha_id', 'phone', 'date_of_birth', 'gender'] as $field) {
+                        if (! empty($mpiResult['record'][$field]) && empty($attributes[$field])) {
+                            $attributes[$field] = $mpiResult['record'][$field];
+                        }
                     }
                 }
             } elseif ($mpiResult['not_found']) {
                 $attributes['verification_status'] = 'not_found';
                 $attributes['last_verification_error'] = 'Not found in national registry';
             } else {
-                // HIE unreachable or errored
+                $attributes['verification_status'] = 'unverified';
+                $attributes['verification_attempts'] = 1;
                 $attributes['last_verification_error'] = $mpiResult['error'];
             }
 
@@ -59,6 +105,7 @@ class PatientRegistrationService
             'patient_id' => $patient->id,
             'patient_number' => $patient->patient_number,
             'verification_status' => $patient->verification_status,
+            'is_dependant' => $patient->isDependant(),
             'source' => 'sha',
         ], $patient);
 
@@ -182,7 +229,7 @@ class PatientRegistrationService
         return $matches
             ->unique('id')
             ->take(5)
-            ->map(fn (Patient $p) => [
+            ->map(fn(Patient $p) => [
                 'id' => $p->id,
                 'patient_number' => $p->patient_number,
                 'name' => $p->full_name,
@@ -198,6 +245,10 @@ class PatientRegistrationService
 
     /* ───── Internals ───── */
 
+    /**
+     * Attempt an MPI lookup against the national registry.
+     * Returns a result envelope — never throws.
+     */
     private function tryMpiLookup(array $data): array
     {
         if (empty($data['national_id']) && empty($data['sha_id'])) {
@@ -214,59 +265,38 @@ class PatientRegistrationService
         $identificationType = ! empty($data['national_id']) ? 'National ID' : 'SHA ID';
 
         try {
-            $response = $this->hie->request('GET', '/patients', [
-                'identification_number' => $identificationNumber,
-                'identification_type' => $identificationType,
-            ]);
-
-            if (! $response->successful()) {
-                return [
-                    'success' => false,
-                    'not_found' => false,
-                    'cr_number' => null,
-                    'record' => null,
-                    'error' => "MPI returned HTTP {$response->status()}",
-                ];
-            }
-
-            $results = $response->json('results') ?? [];
-
-            if (empty($results)) {
-                return [
-                    'success' => false,
-                    'not_found' => true,
-                    'cr_number' => null,
-                    'record' => null,
-                    'error' => 'Patient not found in national registry.',
-                ];
-            }
-
-            $first = $results[0];
+            $record = $this->registry->findPatient($identificationNumber, $identificationType);
 
             return [
                 'success' => true,
                 'not_found' => false,
-                'cr_number' => $first['id'] ?? null,
+                'cr_number' => $record['cr_number'],
+                'principal_cr_number' => null,
+                'principal_name' => null,
+                'relationship_to_principal' => null,
                 'record' => [
-                    'sha_id' => $first['shaId'] ?? null,
-                    'phone' => $first['phone'] ?? null,
-                    'date_of_birth' => $first['dateOfBirth'] ?? null,
-                    'gender' => $first['gender'] ?? null,
+                    'sha_id' => $record['sha_id'],
+                    'phone' => $record['phone'],
+                    'date_of_birth' => $record['date_of_birth'],
+                    'gender' => $record['gender'],
                 ],
                 'error' => null,
             ];
-        } catch (\Throwable $e) {
-            Log::warning('patient.mpi_lookup.failed', [
+        } catch (HieException $e) {
+            \Illuminate\Support\Facades\Log::warning('patient.mpi_lookup.failed', [
                 'identification_number' => $identificationNumber,
+                'reason' => $e->reason,
                 'error' => $e->getMessage(),
             ]);
 
             return [
                 'success' => false,
-                'not_found' => false,
+                'not_found' => $e->isNotFound(),
                 'cr_number' => null,
                 'record' => null,
-                'error' => 'HIE unreachable: ' . $e->getMessage(),
+                'error' => $e->isNotFound()
+                    ? 'Patient not found in national registry.'
+                    : 'HIE unreachable: ' . $e->getMessage(),
             ];
         }
     }

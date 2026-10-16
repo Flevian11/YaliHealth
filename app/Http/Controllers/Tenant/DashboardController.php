@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
 use App\Models\Patient;
 use App\Models\TenantConnection;
 use App\Models\User;
-use App\Support\AuditLogger;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -21,46 +21,41 @@ class DashboardController extends Controller
             fn () => TenantConnection::where('tenant_id', $tenant->id)->first()
         );
 
-        // Patient counts (real when the module lands)
-        $totalPatients = class_exists(Patient::class)
-            ? Patient::count()
-            : 0;
-        $patientsToday = class_exists(Patient::class)
-            ? Patient::whereDate('created_at', today())->count()
-            : 0;
-        $patientsWeek = class_exists(Patient::class)
-            ? Patient::where('created_at', '>=', now()->subDays(7))->count()
-            : 0;
-
+        $totalPatients = Patient::count();
+        $patientsToday = Patient::whereDate('created_at', today())->count();
+        $patientsWeek = Patient::where('created_at', '>=', now()->subDays(7))->count();
         $staff = User::count();
 
-        // 7-day patient registration trend (real when patients exist)
+        // Verification mix — the SHA-onboarding funnel
+        $verificationMix = Patient::query()
+            ->selectRaw('verification_status, count(*) as c')
+            ->groupBy('verification_status')
+            ->pluck('c', 'verification_status')
+            ->all();
+
+        // 7-day registration trend
         $trend = collect(range(6, 0))->map(function ($daysAgo) {
             $date = now()->subDays($daysAgo);
             return [
                 'date' => $date->format('D'),
                 'full_date' => $date->format('j M'),
-                'patients' => class_exists(Patient::class)
-                    ? Patient::whereDate('created_at', $date)->count()
-                    : 0,
+                'patients' => Patient::whereDate('created_at', $date)->count(),
             ];
         })->all();
 
-        // Recent patients
-        $recentPatients = class_exists(Patient::class)
-            ? Patient::orderByDesc('id')->limit(5)->get(['id', 'patient_number', 'first_name', 'middle_name', 'last_name', 'created_at', 'insurance_type'])
-                ->map(fn ($p) => [
-                    'id' => $p->id,
-                    'number' => $p->patient_number,
-                    'name' => trim("{$p->first_name} {$p->middle_name} {$p->last_name}"),
-                    'insurance_type' => $p->insurance_type,
-                    'created_at' => $p->created_at?->toIso8601String(),
-                ])
-                ->all()
-            : [];
+        $recentPatients = Patient::orderByDesc('id')
+            ->limit(5)
+            ->get(['id', 'patient_number', 'first_name', 'middle_name', 'last_name', 'verification_status', 'created_at'])
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'number' => $p->patient_number,
+                'name' => trim("{$p->first_name} {$p->middle_name} {$p->last_name}"),
+                'verification_status' => $p->verification_status,
+                'created_at' => $p->created_at?->toIso8601String(),
+            ])
+            ->all();
 
-        // Recent audit activity (this tenant's only)
-        $recentActivity = \App\Models\AuditLog::orderByDesc('id')
+        $recentActivity = AuditLog::orderByDesc('id')
             ->limit(8)
             ->get(['id', 'event', 'actor_email', 'created_at'])
             ->map(fn ($a) => [
@@ -98,7 +93,11 @@ class DashboardController extends Controller
                 'total_patients' => $totalPatients,
                 'patients_today' => $patientsToday,
                 'patients_week' => $patientsWeek,
+                'verified_patients' => $verificationMix['verified'] ?? 0,
+                'unverified_patients' => $verificationMix['unverified'] ?? 0,
+                'local_only_patients' => $verificationMix['local_only'] ?? 0,
             ],
+            'verification_mix' => $verificationMix,
             'trend' => $trend,
             'recent_patients' => $recentPatients,
             'recent_activity' => $recentActivity,

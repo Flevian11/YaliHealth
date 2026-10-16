@@ -14,6 +14,7 @@ return [
         'doctor' => [
             'dashboard.view',
             'patients.*',
+            'visits.*',
             'appointments.*',
             'encounters.*',
             'prescriptions.*',
@@ -33,6 +34,8 @@ return [
             'dashboard.view',
             'patients.view',
             'patients.create',
+            'visits.view',
+            'visits.create',
             'appointments.*',
             'encounters.view',
             'prescriptions.view',
@@ -46,6 +49,8 @@ return [
         'receptionist' => [
             'dashboard.view',
             'patients.*',
+            'visits.view',
+            'visits.create',
             'appointments.*',
             'hie.registries.read',
             'hie.eligibility.read',
@@ -55,6 +60,8 @@ return [
         'billing' => [
             'dashboard.view',
             'patients.view',
+            'visits.view',
+            'visits.billing',
             'invoices.*',
             'remittances.*',
             'hie.claims.view',
@@ -79,6 +86,14 @@ return [
             'patients.create' => 'Register patients',
             'patients.edit' => 'Edit patient records',
             'patients.delete' => 'Delete patient records',
+        ],
+        'Visits' => [
+            'visits.view' => 'View visits',
+            'visits.create' => 'Open new visits',
+            'visits.consent' => 'Capture patient consent (OTP / biometrics)',
+            'visits.billing' => 'Add billing lines and diagnoses',
+            'visits.dispatch' => 'Submit claims and discharge patients',
+            'visits.emergency' => 'Create emergency (ECCIF) claims',
         ],
         'Clinical' => [
             'appointments.view' => 'View appointments',

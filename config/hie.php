@@ -73,4 +73,19 @@ return [
         'failure_rate' => 0.0, // 0 = never fail; set to 0.05 to simulate flakiness
         'fixtures_path' => database_path('hie-mocks'),
     ],
+
+        /*
+    |--------------------------------------------------------------------------
+    | Snapshot cache TTL (minutes)
+    |--------------------------------------------------------------------------
+    |
+    | How long a patient_hie_snapshots row stays "fresh". Older rows are
+    | still kept for audit — the TTL only controls cache reuse.
+    */
+
+    'snapshot_ttl' => [
+        'eligibility' => env('HIE_SNAPSHOT_ELIGIBILITY_TTL', 30),
+        'sub_benefits' => env('HIE_SNAPSHOT_SUB_BENEFITS_TTL', 30),
+        'interventions' => env('HIE_SNAPSHOT_INTERVENTIONS_TTL', 360),
+    ],
 ];

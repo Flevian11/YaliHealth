@@ -1,0 +1,6 @@
+{
+  "guid": "{{auth_guid}}",
+  "token": "{{consent_token}}",
+  "status": "AUTHORIZED",
+  "expires_in": 600
+}

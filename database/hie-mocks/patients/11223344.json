@@ -1,0 +1,19 @@
+{
+  "count": 1,
+  "results": [
+    {
+      "id": "CR-11223344",
+      "identificationNumber": "11223344",
+      "identificationType": "National ID",
+      "firstName": "David",
+      "middleName": "Kimani",
+      "lastName": "Mwangi",
+      "dateOfBirth": "1978-11-22",
+      "gender": "male",
+      "phone": "+254722111222",
+      "shaId": "SHA-2299-1145",
+      "alive": true,
+      "dependants": []
+    }
+  ]
+}

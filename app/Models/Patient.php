@@ -4,20 +4,37 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use App\Models\Visit;
 
 class Patient extends Model
 {
     protected $fillable = [
         'patient_number',
-        'first_name', 'middle_name', 'last_name',
-        'date_of_birth', 'gender',
-        'phone', 'email', 'county', 'village',
-        'national_id', 'sha_id', 'cr_number',
-        'verification_status', 'verification_attempts',
-        'last_verified_at', 'last_verification_error',
-        'next_of_kin', 'allergies', 'notes',
-        'registered_by', 'first_visit_at',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'date_of_birth',
+        'gender',
+        'phone',
+        'email',
+        'county',
+        'village',
+        'national_id',
+        'sha_id',
+        'cr_number',
+        'verification_status',
+        'verification_attempts',
+        'last_verified_at',
+        'last_verification_error',
+        'next_of_kin',
+        'allergies',
+        'notes',
+        'registered_by',
+        'first_visit_at',
         'merged_into_id',
+        'principal_cr_number',
+        'principal_name',
+        'relationship_to_principal',
     ];
 
     protected $casts = [
@@ -45,7 +62,7 @@ class Patient extends Model
     public function isVerified(): bool
     {
         return $this->verification_status === 'verified'
-            && ! empty($this->cr_number);
+            && ! empty($this->hiePatientId());
     }
 
     public function isUnverified(): bool
@@ -63,11 +80,35 @@ class Patient extends Model
         return $this->merged_into_id !== null;
     }
 
+    public function isDependant(): bool
+    {
+        return ! empty($this->principal_cr_number);
+    }
+
+    public function isPrincipal(): bool
+    {
+        return ! empty($this->cr_number) && empty($this->principal_cr_number);
+    }
+
+    /**
+     * The CR number to send on every HIE call for this patient.
+     * For a dependant, this is the principal's CR.
+     */
+    public function hiePatientId(): ?string
+    {
+        return $this->principal_cr_number ?: $this->cr_number;
+    }
+
     /* ───── Relations ───── */
 
     public function mergedInto()
     {
         return $this->belongsTo(self::class, 'merged_into_id');
+    }
+
+    public function visits()
+    {
+        return $this->hasMany(Visit::class);
     }
 
     /* ───── Scopes ───── */

@@ -1,0 +1,6 @@
+{
+  "status": "uploaded",
+  "message": "Attachment accepted.",
+  "attachment_id": "ATT-{{request_id}}",
+  "uploaded_at": "{{now}}"
+}

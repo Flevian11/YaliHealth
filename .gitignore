@@ -42,3 +42,7 @@ yarn-error.log
 /boost.json
 /opencode.json
 /opencode.jsonc
+
+/schema_full.sql
+/storage/tenant*
+/database/hie-mocks/patients_LEGACY.json

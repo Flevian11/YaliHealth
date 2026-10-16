@@ -15,14 +15,6 @@ class HieClient
         private MockHieService $mock,
     ) {}
 
-    /**
-     * Send a request to the HIE for the current tenant.
-     *
-     * @param  string  $method  GET|POST|PUT|DELETE
-     * @param  string  $path    e.g. "/patients" — appended to base URL
-     * @param  array   $payload Query string, JSON body, or multipart data
-     * @param  array   $options ['multipart' => bool, 'headers' => array, 'authenticated' => bool]
-     */
     public function request(string $method, string $path, array $payload = [], array $options = []): Response
     {
         $method = strtoupper($method);
@@ -33,7 +25,6 @@ class HieClient
             return $this->mock->handle($method, $path, $payload, $options);
         }
 
-        // Real HTTP path
         $tenant = tenant();
 
         if (! $tenant) {
@@ -55,7 +46,6 @@ class HieClient
             $headers['Authorization'] = 'Bearer ' . $this->tokenFor($tenant->id, $connection);
         }
 
-        // Facility context headers (only when configured)
         if (config('hie.facility_context') === 'headers' && $connection->facility_fr_code) {
             $headers['X-Facility-Id'] = $connection->facility_fr_code;
             $headers['X-Facility-Id-Type'] = 'fr-code';
@@ -67,15 +57,22 @@ class HieClient
             ->withOptions(['http_errors' => false]);
 
         if ($multipart) {
-            // Use asMultipart for preauth, attachments, etc.
             $request = $request->asMultipart();
+
+            foreach ($options['attach'] ?? [] as $attachment) {
+                $request = $request->attach(
+                    $attachment['name'],
+                    $attachment['contents'],
+                    $attachment['filename'] ?? null,
+                );
+            }
         } else {
             $request = $request->asJson();
         }
 
         $response = match ($method) {
             'GET' => $request->get($url, $payload),
-            'POST' => $request->post($url, $multipart ? $payload : $payload),
+            'POST' => $request->post($url, $payload),
             'PUT' => $request->put($url, $payload),
             'DELETE' => $request->delete($url, $payload),
             default => throw new \InvalidArgumentException("Unsupported HTTP method: {$method}"),
@@ -94,9 +91,6 @@ class HieClient
         return $response;
     }
 
-    /**
-     * Fetch (or refresh) the tenant's access token.
-     */
     public function tokenFor(string $tenantId, ?TenantConnection $connection = null): string
     {
         $cacheKey = sprintf((string) config('hie.token_cache_key'), $tenantId);
@@ -109,9 +103,7 @@ class HieClient
         $connection ??= $this->resolveConnection($tenantId);
 
         if (! $connection->client_id || ! $connection->hasClientSecret()) {
-            throw new \RuntimeException(
-                "Tenant {$tenantId} has no HIE credentials configured."
-            );
+            throw new \RuntimeException("Tenant {$tenantId} has no HIE credentials configured.");
         }
 
         $baseUrl = $this->environment->baseUrl();
@@ -126,9 +118,7 @@ class HieClient
             ]);
 
         if ($response->failed()) {
-            throw new \RuntimeException(
-                "HIE token request failed with status {$response->status()}"
-            );
+            throw new \RuntimeException("HIE token request failed with status {$response->status()}");
         }
 
         $accessToken = (string) $response->json('access_token');
@@ -152,7 +142,7 @@ class HieClient
     private function resolveConnection(string $tenantId): TenantConnection
     {
         return tenancy()->central(
-            fn () => TenantConnection::where('tenant_id', $tenantId)->firstOrFail()
+            fn () => TenantConnection::where('tenant_id', $tenantId)->firstOrFail(),
         );
     }
 }

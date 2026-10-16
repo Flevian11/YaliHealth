@@ -2,7 +2,7 @@
   "count": 1,
   "results": [
     {
-      "id": "CR-{{patient_id}}",
+      "id": "CR-24131705",
       "identificationNumber": "24131705",
       "identificationType": "National ID",
       "firstName": "Amina",
@@ -12,7 +12,8 @@
       "gender": "female",
       "phone": "+254714000898",
       "shaId": "SHA-8471-9923",
-      "alive": true
+      "alive": true,
+      "dependants": []
     }
   ]
 }

@@ -21,6 +21,7 @@ import { useTenantPermissions } from '@/hooks/use-tenant-permissions';
 import { Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
+    AlertTriangle,
     BedDouble,
     Building2,
     CalendarClock,
@@ -84,6 +85,12 @@ const navGroups: NavGroup[] = [
                 href: '/patients',
                 icon: Users,
                 permission: 'patients.view',
+            },
+            {
+                label: 'Visits',
+                href: '/visits',
+                icon: ClipboardList,
+                permission: 'visits.view',
             },
             {
                 label: 'Appointments',
@@ -181,7 +188,7 @@ const navGroups: NavGroup[] = [
             },
         ],
     },
-        {
+    {
         label: 'Administration',
         items: [
             {
@@ -208,7 +215,7 @@ const navGroups: NavGroup[] = [
                 href: '/announcements',
                 permission: 'announcements.view',
             },
-                        {
+            {
                 label: 'Settings',
                 href: '/settings',
                 icon: Settings,
@@ -596,7 +603,7 @@ export default function TenantLayout({ children }: { children: ReactNode }) {
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings/profile">
-                                            <User className="mr-2 h-4 w-4" />{" "}
+                                            <User className="mr-2 h-4 w-4" />{' '}
                                             Profile
                                         </Link>
                                     </DropdownMenuItem>
@@ -605,7 +612,7 @@ export default function TenantLayout({ children }: { children: ReactNode }) {
                                         onSelect={() => router.post('/logout')}
                                         className="text-destructive focus:text-destructive"
                                     >
-                                        <LogOut className="mr-2 h-4 w-4" />{" "}
+                                        <LogOut className="mr-2 h-4 w-4" />{' '}
                                         Sign out
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -624,6 +631,22 @@ export default function TenantLayout({ children }: { children: ReactNode }) {
                             <button
                                 onClick={() => setFlashDismissed(true)}
                                 className="text-emerald-600 hover:text-emerald-800 dark:text-emerald-400"
+                                aria-label="Dismiss"
+                            >
+                                ×
+                            </button>
+                        </div>
+                    )}
+                    {props.flash?.error && !flashDismissed && (
+                        <div className="mb-4 flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span className="flex-1">
+                                {props.flash.error}
+                            </span>
+                            <button
+                                onClick={() => setFlashDismissed(true)}
+                                className="text-rose-600 hover:text-rose-800 dark:text-rose-400"
+                                aria-label="Dismiss"
                             >
                                 ×
                             </button>
